@@ -12,5 +12,6 @@ null,
 {"id":10,"expanded":false,"name":"CH_4","order":12,"parentId":0,"scrollX":0,"scrollY":0},
 {"id":11,"expanded":false,"name":"CH_5","order":13,"parentId":0,"scrollX":0,"scrollY":0},
 {"id":12,"expanded":true,"name":"CH_0","order":2,"parentId":0,"scrollX":1071.2727272727273,"scrollY":584.7272727272727},
-{"id":13,"expanded":false,"name":"FIRSTA_BEGIN","order":3,"parentId":12,"scrollX":1473,"scrollY":828}
+{"id":13,"expanded":false,"name":"FIRSTA_BEGIN","order":3,"parentId":12,"scrollX":1473,"scrollY":828},
+{"id":14,"expanded":false,"name":"Village","order":10,"parentId":4,"scrollX":619,"scrollY":1348}
 ]
