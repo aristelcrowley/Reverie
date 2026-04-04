@@ -5,11 +5,12 @@ null,
 {"id":3,"expanded":false,"name":"FOREST_LEFT","order":5,"parentId":2,"scrollX":0,"scrollY":0},
 {"id":4,"expanded":true,"name":"CH_2","order":6,"parentId":0,"scrollX":619,"scrollY":396},
 {"id":5,"expanded":false,"name":"Mountain Village","order":9,"parentId":4,"scrollX":619,"scrollY":396},
-{"id":6,"expanded":true,"name":"CH_3","order":10,"parentId":0,"scrollX":619,"scrollY":396},
+{"id":6,"expanded":true,"name":"CH_3","order":11,"parentId":0,"scrollX":619,"scrollY":396},
 {"id":7,"expanded":false,"name":"INTERVAL","order":7,"parentId":4,"scrollX":619,"scrollY":396},
 {"id":8,"expanded":true,"name":"before city","order":8,"parentId":4,"scrollX":619,"scrollY":396},
 {"id":9,"expanded":false,"name":"MAIN_HUB","order":1,"parentId":0,"scrollX":0,"scrollY":0},
-{"id":10,"expanded":false,"name":"CH_4","order":11,"parentId":0,"scrollX":0,"scrollY":0},
-{"id":11,"expanded":false,"name":"CH_5","order":12,"parentId":0,"scrollX":0,"scrollY":0},
-{"id":12,"expanded":false,"name":"CH_0","order":2,"parentId":0,"scrollX":0,"scrollY":0}
+{"id":10,"expanded":false,"name":"CH_4","order":12,"parentId":0,"scrollX":0,"scrollY":0},
+{"id":11,"expanded":false,"name":"CH_5","order":13,"parentId":0,"scrollX":0,"scrollY":0},
+{"id":12,"expanded":false,"name":"CH_0","order":2,"parentId":0,"scrollX":0,"scrollY":0},
+{"id":13,"expanded":false,"name":"Village","order":10,"parentId":4,"scrollX":619,"scrollY":1348}
 ]
