@@ -5162,6 +5162,10 @@ Window_Message.prototype.startPause = function() {
     this.pause = true;
 };
 
+Window_Message.prototype.isWaiting = function() {
+    return this.pause || this._waitCount >0;
+};
+
 //-----------------------------------------------------------------------------
 // Window_ScrollText
 //
