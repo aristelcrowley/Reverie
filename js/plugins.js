@@ -16,6 +16,5 @@ var $plugins =
 {"name":"wasd","status":true,"description":"","parameters":{}},
 {"name":"Synrec_TextSounds","status":true,"description":"v1.5 Create Text Sounds","parameters":{"Use Font Size Volume":"false","Default Se":"Cursor3","Default Volume":"90","Default Pitch":"100","Default Pan":"0","Default Pitch Variance":"0","Custom Text Sounds":"[]"}},
 {"name":"BattleUI","status":true,"description":"Complete Battle UI Override","parameters":{}},
-{"name":"CustomTitleScreen","status":true,"description":"Custom Cinematic Title Screen (Sprite-Based, No Window UI)","parameters":{"BackgroundImage":"home","MenuX":"50","MenuY":"300","Spacing":"60","FontSize":"50"}},
-{"name":"EnemyStateHUD","status":true,"description":"[Reverie] Enemy State HUD - Fixes colored enemy names and handles state-based name glitches.","parameters":{}}
+{"name":"CustomTitleScreen","status":true,"description":"Custom Cinematic Title Screen (Sprite-Based, No Window UI)","parameters":{"BackgroundImage":"home","MenuX":"50","MenuY":"300","Spacing":"60","FontSize":"50"}}
 ];
