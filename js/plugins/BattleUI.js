@@ -127,6 +127,7 @@
 
     Window_ActorCommand.prototype.maxCols = function() { return 2; };
     Window_ActorCommand.prototype.numVisibleRows = function() { return 3; };
+    Window_ActorCommand.prototype.lineHeight = function() { return 36; };
     Window_ActorCommand.prototype.drawItemBackground = function(index) {}; 
     Window_ActorCommand.prototype.refreshCursor = function() { this.setCursorRect(0, 0, 0, 0); }; 
 
@@ -163,6 +164,9 @@
         }
     };
 
+    // ======================================================================
+    // MODIFIED ACTOR COMMAND WINDOW (OMORI AESTHETIC - NO EMOJI, CENTERED)
+    // ======================================================================
     Window_ActorCommand.prototype.drawItem = function(index) {
         if (!this._list || !this._list[index]) return;
 
@@ -170,40 +174,68 @@
         
         this.contents.clearRect(rect.x, rect.y - 4, rect.width, rect.height + 8);
 
-        const boxColor = CHAOTIC_COLORS[index % CHAOTIC_COLORS.length];
-        this.contents.fillRect(rect.x + 2, rect.y + 2, rect.width - 4, rect.height - 4, boxColor);
-
         let cleanName = cleanText(this.commandName(index));
         let enabled = this.isCommandEnabled(index);
+        let isSelected = (this.index() === index);
+
+        const bx = rect.x + 2;
+        const by = rect.y + 2;
+        const bw = rect.width - 4;
+        const bh = rect.height - 4;
+
+        // Clean monochrome style instead of chaotic colors
+        const bgColor = isSelected ? '#ffffff' : '#000000';
+        const textColor = isSelected ? '#000000' : '#ffffff';
+
+        // Draw Background Box
+        this.contents.fillRect(bx, by, bw, bh, bgColor);
+
+        // Draw Thick White Border
+        this.contents.fillRect(bx, by, bw, 3, '#ffffff'); 
+        this.contents.fillRect(bx, by + bh - 3, bw, 3, '#ffffff'); 
+        this.contents.fillRect(bx, by, 3, bh, '#ffffff'); 
+        this.contents.fillRect(bx + bw - 3, by, 3, bh, '#ffffff'); 
 
         this.contents.fontFace = CUSTOM_FONT;
-        this.contents.fontSize = CUSTOM_FONT_SIZE;
-        this.contents.textColor = "#ffffff"; 
-        this.contents.outlineColor = "rgba(0, 0, 0, 0.9)";
-        this.contents.outlineWidth = 5;
+        this.contents.fontSize = 27;
+        this.contents.textColor = textColor; 
+        this.contents.outlineColor = 'rgba(0,0,0,1)';
+        this.contents.outlineWidth = isSelected ? 0 : 4; 
         this.changePaintOpacity(enabled);
 
-        let jitterY = (index % 2 === 0) ? -3 : 3;
-
-        if (this.index() === index) {
-            cleanName = CURSOR_SYMBOL + " " + cleanName;
-            jitterY = 0; 
-        }
-
-        this.drawText(cleanName, rect.x, rect.y + jitterY, rect.width, 'center');
+        // Draw text PERFECTLY CENTERED. No shifting, no emoji.
+        this.drawText(cleanName, rect.x, rect.y, rect.width, 'center');
     };
+    // ======================================================================
 
     const _Scene_Battle_actorCommandWindowRect = Scene_Battle.prototype.actorCommandWindowRect;
     Scene_Battle.prototype.actorCommandWindowRect = function() {
         const w = Graphics.boxWidth * 0.6; 
         const h = this.calcWindowHeight(3, true); 
         const x = (Graphics.boxWidth - w) / 2;
-        const y = Graphics.boxHeight - h - 10;
+        // Shift window up slightly to prevent scrolling and sit cleanly
+        const y = Graphics.boxHeight - h - 25; 
         return new Rectangle(x, y, w, h);
     };
 
+    // Override innerHeight for ActorCommand to ensure all 3 rows fit without scroll arrows
+    Window_ActorCommand.prototype.innerHeight = function() {
+        return Math.max(0, this.height - this.padding * 2);
+    };
+
+    // ======================================================================
+    // SKILL/ITEM CHOOSING WINDOWS - STRICTLY UNTOUCHED AS REQUESTED
+    // ======================================================================
     const setupSubMenu = function(windowClass) {
         applyBlackBox(windowClass); 
+
+        const _initialize = windowClass.prototype.initialize;
+        windowClass.prototype.initialize = function(rect) {
+            _initialize.call(this, rect);
+            this._headerSprite = new Sprite(new Bitmap(rect.width, 70));
+            this.addChild(this._headerSprite);
+            this._headerSprite.bitmap.fillRect(0, 58, rect.width, 4, '#ffffff');
+        };
 
         windowClass.prototype.maxCols = function() { return 2; };
         windowClass.prototype.numVisibleRows = function() { return 2; }; 
@@ -270,9 +302,7 @@
         };
 
         windowClass.prototype.drawHeader = function() {
-            // Clear header area before redrawing to prevent stacking
             this.contents.clearRect(0, 0, this.contentsWidth(), 56);
-            this.contents.fillRect(0, 58, this.contentsWidth(), 4, '#ffffff'); 
             
             const item = this.item();
             if (!item) return;
@@ -287,7 +317,7 @@
             if (DataManager.isItem(item)) {
                 text = "Hold: " + $gameParty.numItems(item) + " x";
             } else if (DataManager.isSkill(item)) {
-                let cost = item.mpCost > 0 ? item.mpCost + " SP" : (item.tpCost > 0 ? item.tpCost + " TP" : "0 SP");
+                let cost = item.mpCost > 0 ? item.mpCost + " MP" : (item.tpCost > 0 ? item.tpCost + " TP" : "0 MP");
                 text = "Cost: " + cost;
             }
             this.drawText(text, 0, 10, this.contentsWidth(), 'center');
