@@ -466,6 +466,7 @@ Window_BattleLog.prototype.displayAction = function(subject, item) {
         this.push('addText', cleanText(subject.name()) + " is blinded by self-sacrifice!");
         this.push('wait');
         this.push('wait');
+        this.push('wait');
         subject._martyrBlinded = false; // Turn it off so it doesn't accidentally print on their next normal turn
     }
 
@@ -532,6 +533,8 @@ Window_BattleLog.prototype.displayAction = function(subject, item) {
     
     if (msg2) {
         this.push('wait');
+        this.push('wait');
+        this.push('wait');
         printCustomMessage(msg2);
     }
 
@@ -542,6 +545,8 @@ Window_BattleLog.prototype.displayAction = function(subject, item) {
             let mpAmount = Math.floor(target.mmp * 0.15);
             this.push('addText', tName + " recovered " + hpAmount + " HP!");
             this.push('wait'); 
+            this.push('wait');
+            this.push('wait');
             this.push('addText', tName + " recovered " + mpAmount + " MP!");
         } else if (sName.includes("wake-up call")) {
             let hpAmount = Math.floor(target.mhp * 0.40);
@@ -553,6 +558,7 @@ Window_BattleLog.prototype.displayAction = function(subject, item) {
     }
     
     // STANDARD DELAY FOR ALL ACTIONS
+    this.push('wait');
     this.push('wait');
 };
 
@@ -567,16 +573,6 @@ Window_BattleLog.prototype.displayHpDamage = function(target) {
             this.push('addText', cleanText(target.name()) + " takes 0 damage!");
         }
         this.push('wait');
-    }
-};
-
-Window_BattleLog.prototype.displayMpDamage = function(target) {
-    if (target.isAlive() && target.result().mpDamage !== 0) {
-        if (target.result().mpDamage < 0) {
-            this.push('addText', cleanText(target.name()) + " recovered " + Math.abs(target.result().mpDamage) + " MP!");
-        } else {
-            this.push('addText', cleanText(target.name()) + " takes " + target.result().mpDamage + " MP damage!");
-        }
         this.push('wait');
     }
 };
@@ -611,6 +607,8 @@ Window_BattleLog.prototype.displayChangedStates = function(target) {
                 this.push('addText', cleanText(target.name()) + " becomes " + cleanText(state.name) + "!");
                 this.push('wait');
                 this.push('wait');
+                this.push('wait');
+                this.push('wait');
             }
         }
     }
@@ -643,6 +641,72 @@ Window_BattleLog.prototype.performDespairReflect = function(target, damage) {
         this.displayHpDamage(target);
     }
 }
+
+// DEATH MESSAGE CATCHER (HOOKED TO COLLAPSE ANIMATION)
+const _Game_Battler_performCollapse = Game_Battler.prototype.performCollapse;
+Game_Battler.prototype.performCollapse = function() {
+    // 1. Run the normal collapse animation so the sprite fades out
+    _Game_Battler_performCollapse.call(this);
+    
+    // 2. Guarantee we are in combat and the custom Log Window is ready
+    if ($gameParty.inBattle() && BattleManager._logWindow) {
+        
+        // 3. Clean the name of any hidden VisuStella icon codes
+        let cName = this.name().replace(/\\I\[\d+\]/g, '').replace(/[\x00-\x1F\x7F-\x9F]/g, '').trim();
+        
+        // 4. Print the correct narrative text directly to the log queue!
+        if (this.isActor()) {
+            BattleManager._logWindow.push('addText', cName + " is erased...");
+        } else {
+            BattleManager._logWindow.push('addText', cName + " is defeated!");
+        }
+        
+        // 5. Force the engine to pause so the text hangs on screen heavily
+        BattleManager._logWindow.push('wait');
+        BattleManager._logWindow.push('wait');
+        BattleManager._logWindow.push('wait');
+    }
+};
+
+// HYSTERIA MP-TO-HP BYPASS
+const HYSTERIA_STATE_ID = 7; 
+
+const _Game_BattlerBase_canPaySkillCost = Game_BattlerBase.prototype.canPaySkillCost;
+Game_BattlerBase.prototype.canPaySkillCost = function(skill) {
+    // If Hysterical, allow them to cast even with 0 MP
+    if (this.isStateAffected(HYSTERIA_STATE_ID) && skill.mpCost > 0) {
+        return this.tp >= this.skillTpCost(skill); // Only check TP
+    }
+    return _Game_BattlerBase_canPaySkillCost.call(this, skill);
+};
+
+const _Game_BattlerBase_paySkillMpCost = Game_BattlerBase.prototype.paySkillMpCost;
+Game_BattlerBase.prototype.paySkillMpCost = function(skill) {
+    // If Hysterical, completely cancel the native MP deduction
+    if (this.isStateAffected(HYSTERIA_STATE_ID) && skill.mpCost > 0) {
+        return; 
+    }
+    _Game_BattlerBase_paySkillMpCost.call(this, skill);
+};
+
+// SYNC HUD MAKER DAMAGE WITH BATTLE LOG QUEUE
+Window_BattleLog.prototype.performHysteriaDamage = function(target, damage) {
+    if (target.isAlive()) {
+        // Subtract the HP ONLY when this function is called in the queue
+        target.setHp(target.hp - damage);
+        
+        // Trigger the red popup
+        target.result().clear();
+        target.result().hpAffected = true;
+        target.result().hpDamage = damage;
+        target.startDamagePopup();
+        
+        // If it kills them, trigger the collapse (Our global death message will catch it!)
+        if (target.isDead()) {
+            target.performCollapse();
+        }
+    }
+};
 
 })();
 
