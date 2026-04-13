@@ -563,6 +563,8 @@ Window_BattleLog.prototype.displayHpDamage = function(target) {
             this.push('addText', cleanText(target.name()) + " takes " + target.result().hpDamage + " damage!");
         } else if (target.result().hpDamage < 0) {
             this.push('addText', cleanText(target.name()) + " recovered " + Math.abs(target.result().hpDamage) + " HP!");
+        } else {
+            this.push('addText', cleanText(target.name()) + " takes 0 damage!");
         }
         this.push('wait');
     }
@@ -618,4 +620,24 @@ Window_BattleLog.prototype.drawLineText = function(index) {
     
     this.drawTextEx(textToDraw, rect.x + 8, rect.y, rect.width);
 };
+
+// CUSTOM DAMAGE REFLECT (DESPAIR TIMING QUEUE)
+Window_BattleLog.prototype.performDespairReflect = function(target, damage) {
+    if (target.isAlive()) {
+        target.setHp(target.hp - damage);
+        target.result().clear();
+        target.result().hpAffected = true;
+        target.result().hpDamage = damage;
+        target.startDamagePopup();
+        
+        if (target.isDead()) {
+            target.performCollapse();
+        }
+        
+        // Use our own native UI damage display!
+        this.displayHpDamage(target);
+    }
+}
+
 })();
+
