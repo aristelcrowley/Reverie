@@ -449,13 +449,85 @@ Scene_Battle.prototype.actorWindowRect = targetRect;
 Window_BattleLog.prototype.pushBaseLine = function() {};
 Window_BattleLog.prototype.popBaseLine = function() {};
 
-// STRIP CENTER TAGS AGGRESSIVELY BEFORE ADDING TO LOG
-const _Window_BattleLog_addText = Window_BattleLog.prototype.addText;
+// ======================================================================
+// SMOOTH SCROLLING BATTLE LOG (FLICKER-FREE FINAL)
+// ======================================================================
+
+// Increase height to accommodate the 5th line during the transition
+Window_BattleLog.prototype.contentsHeight = function() {
+    return (this.maxLines() + 1) * this.lineHeight(); 
+};
+
+// Override refresh to draw EVERY line currently in the array (including the 5th one)
+Window_BattleLog.prototype.refresh = function() {
+    this.contents.clear();
+    for (let i = 0; i < this._lines.length; i++) {
+        this.drawLineText(i);
+    }
+};
+
+const _Window_BattleLog_clear = Window_BattleLog.prototype.clear;
+Window_BattleLog.prototype.clear = function() {
+    _Window_BattleLog_clear.call(this);
+    this._slideUpTimer = 0;
+    if (this.origin) this.origin.y = 0; 
+};
+
+const _Window_BattleLog_update = Window_BattleLog.prototype.update;
+Window_BattleLog.prototype.update = function() {
+    _Window_BattleLog_update.call(this);
+    
+    if (this._slideUpTimer > 0) {
+        this._slideUpTimer--;
+        
+        // Use a smoother ease-out for the progress
+        let progress = 1 - (this._slideUpTimer / this._slideUpMax);
+        
+        if (this.origin) {
+            this.origin.y = Math.floor(this.lineHeight() * progress);
+        }
+        
+        if (this._slideUpTimer === 0) {
+            while (this._lines.length > this.maxLines()) {
+                this._lines.shift();
+            }
+            if (this.origin) this.origin.y = 0;
+            this.refresh(); // Clean up to the standard 4 lines
+        }
+    }
+};
+
 Window_BattleLog.prototype.addText = function(text) {
     if (text && typeof text === 'string') {
         text = text.replace(/<center>/gi, '').replace(/<\/center>/gi, '');
     }
-    _Window_BattleLog_addText.call(this, text);
+    
+    // Safety snap if engine spams text
+    if (this._slideUpTimer > 0) {
+        this._slideUpTimer = 0;
+        while (this._lines.length > this.maxLines()) {
+            this._lines.shift();
+        }
+        if (this.origin) this.origin.y = 0;
+    }
+    
+    this._lines.push(text);
+    this.refresh(); // Draw the new text immediately so it exists for the slide
+    
+    if (this._lines.length > this.maxLines()) {
+        this._slideUpMax = 12; 
+        this._slideUpTimer = this._slideUpMax;
+    }
+    
+    this.wait(); 
+};
+
+// Ensure drawLineText is using the correct coordinates for scrolling
+Window_BattleLog.prototype.drawLineText = function(index) {
+    const rect = this.lineRect(index);
+    let textToDraw = this._lines[index] || "";
+    textToDraw = textToDraw.replace(/<center>/gi, "").replace(/<\/center>/gi, "");
+    this.drawTextEx(textToDraw, rect.x + 8, rect.y, rect.width);
 };
 
 // CUSTOM BATTLE LOG 
@@ -616,7 +688,7 @@ Window_BattleLog.prototype.displayChangedStates = function(target) {
 
 Window_BattleLog.prototype.drawLineText = function(index) {
     const rect = this.lineRect(index);
-    this.contents.clearRect(rect.x, rect.y, rect.width, rect.height);
+    // (We completely deleted the clearRect line here!)
     
     let textToDraw = this._lines[index] || "";
     textToDraw = textToDraw.replace(/<center>/gi, "").replace(/<\/center>/gi, "");
