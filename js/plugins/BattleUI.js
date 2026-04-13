@@ -15,7 +15,7 @@ const SMALL_FONT_SIZE = 20;
 
 const CURSOR_SYMBOL = "👉"; 
 
-FontManager.load("BattleUIFont", "DotGothic16-Regular.ttf");
+FontManager.load("BattleUIFont", "KleeOne-SemiBold.ttf");
 
 function cleanText(text) {
     if (!text) return "";
