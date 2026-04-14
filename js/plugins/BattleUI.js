@@ -613,6 +613,8 @@ Window_BattleLog.prototype.displayAction = function(subject, item) {
     if (!isFailed && target && targets.length === 1) {
         let tName = cleanText(target.name());
         if (sName.includes("clinical facts")) {
+            let wasUpgraded = target.isStateAffected(6);
+
             let hpAmount = Math.floor(target.mhp * 0.15);
             let mpAmount = Math.floor(target.mmp * 0.15);
             this.push('addText', tName + " recovered " + hpAmount + " HP!");
