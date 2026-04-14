@@ -620,12 +620,24 @@ Window_BattleLog.prototype.displayAction = function(subject, item) {
             this.push('wait');
             this.push('wait');
             this.push('addText', tName + " recovered " + mpAmount + " MP!");
+
+            if (wasUpgraded) {
+                this.push('wait');
+                this.push('wait');
+                this.push('addText', tName + " becomes Heroic!");
+            }
         } else if (sName.includes("wake-up call")) {
             let hpAmount = Math.floor(target.mhp * 0.40);
             this.push('addText', tName + " recovered " + hpAmount + " HP!");
+            this.push('wait');
+            this.push('wait');
+            this.push('addText', tName + " becomes Hopeless!");
         } else if (sName.includes("bear hug")) {
             let mpAmount = Math.floor(target.mmp * 0.40);
             this.push('addText', tName + " recovered " + mpAmount + " MP!");
+            this.push('wait');
+            this.push('wait');
+            this.push('addText', tName + " becomes Frantic!");
         }
     }
     
