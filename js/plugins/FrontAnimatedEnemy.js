@@ -20,6 +20,7 @@
  * <Frame Speed: X>
  * <Position X: X>
  * <Position Y: Y>
+ * <Upscale: X></Upscale:>
  * 
  * Example:
  * <Frame 1: Slime-Idle-1>
@@ -34,7 +35,7 @@
 
 (() => {
     const _Sprite_Enemy_initMembers = Sprite_Enemy.prototype.initMembers;
-    Sprite_Enemy.prototype.initMembers = function() {
+    Sprite_Enemy.prototype.initMembers = function () {
         _Sprite_Enemy_initMembers.call(this);
         this._animFrames = [];
         this._animSpeed = 10;
@@ -43,23 +44,24 @@
         this._customX = null;
         this._customY = null;
         this._isAnimatedFront = false;
+        this._scale = 1.0;
     };
 
     const _Sprite_Enemy_setBattler = Sprite_Enemy.prototype.setBattler;
-    Sprite_Enemy.prototype.setBattler = function(battler) {
+    Sprite_Enemy.prototype.setBattler = function (battler) {
         _Sprite_Enemy_setBattler.call(this, battler);
         if (this._enemy) {
             this.setupAnimatedEnemy();
         }
     };
 
-    Sprite_Enemy.prototype.setupAnimatedEnemy = function() {
+    Sprite_Enemy.prototype.setupAnimatedEnemy = function () {
         const enemy = this._enemy.enemy();
         if (!enemy) return;
         const note = enemy.note;
 
         this._animFrames = [];
-        
+
         // Read animation frames
         const frameRegex = /<Frame\s+(\d+):\s*(.+)>/gi;
         let match;
@@ -69,7 +71,7 @@
             const filename = match[2].trim();
             frames[index] = filename;
         }
-        
+
         // Safely filter out undefined items from skipped index numbers
         this._animFrames = frames.filter(Boolean);
 
@@ -98,6 +100,13 @@
             this._customY = parseInt(posYMatch[1], 10);
         }
 
+        const scaleMatch = note.match(/<Upscale:\s*([\d.]+)>/i);
+        if (scaleMatch) {
+            this._scale = parseFloat(scaleMatch[1]);
+            this.scale.x = this._scale;
+            this.scale.y = this._scale;
+        }
+
         // Apply custom position immediately if defined
         if (this._customX !== null || this._customY !== null) {
             const targetX = this._customX !== null ? this._customX : this._enemy.screenX();
@@ -107,16 +116,16 @@
     };
 
     const _Sprite_Enemy_update = Sprite_Enemy.prototype.update;
-    Sprite_Enemy.prototype.update = function() {
+    Sprite_Enemy.prototype.update = function () {
         _Sprite_Enemy_update.call(this);
         if (this._enemy && this._isAnimatedFront) {
             this.updateFrontAnimation();
         }
     };
 
-    Sprite_Enemy.prototype.updateFrontAnimation = function() {
+    Sprite_Enemy.prototype.updateFrontAnimation = function () {
         if (this._animFrames.length === 0) return;
-        
+
         this._animTimer++;
         if (this._animTimer >= this._animSpeed) {
             this._animTimer = 0;
@@ -128,7 +137,7 @@
     };
 
     const _Sprite_Enemy_updateBitmap = Sprite_Enemy.prototype.updateBitmap;
-    Sprite_Enemy.prototype.updateBitmap = function() {
+    Sprite_Enemy.prototype.updateBitmap = function () {
         if (this._isAnimatedFront && this._animFrames.length > 0) {
             const currentName = this._animFrames[this._animIndex];
             if (this._battlerName !== currentName || this._battlerHue !== this._enemy.battlerHue()) {
