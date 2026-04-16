@@ -1,6 +1,6 @@
 /*:
 @target MZ
-@plugindesc Reverie - Complete Main Menu UI Override (THE PIXI RENDER HIJACK)
+@plugindesc Reverie - Complete Main Menu UI Override (PIXI HIJACK + MEMENTOS BLUEPRINT)
 @author Aristel
 */
 
@@ -8,7 +8,7 @@
     // =======================================================
     // 1. SETTINGS & CONSTANTS
     // =======================================================
-    const DEBUG_MODE = false; // Turned off the green skeleton boxes for you
+    const DEBUG_MODE = true; 
 
     const MENU_MARGIN_X = 12; 
     const MENU_MARGIN_Y = 12; 
@@ -17,12 +17,9 @@
     const CURSOR_NATIVE_SIZE = 14; 
     const CURSOR_DRAW_SIZE = 24;
 
-    // --- EXACT HUD MAKER GROUP NAME ---
     const HMU_MEMENTOS_GROUP = "MementosGroup";
 
-    // Custom delay for the cursor when opening a sliding submenu (in frames)
     const CURSOR_ANIMATION_DELAY = 45; 
-    // How far up (in pixels) the menu starts before sliding down (starts at 0, slides to 68)
     const SLIDE_Y_OFFSET = -68; 
 
     // =======================================================
@@ -34,7 +31,6 @@
         for (let i = 0; i < parent.children.length; i++) {
             const child = parent.children[i];
             
-            // Aggressively check every known way HMU stores the Name
             let isTarget = false;
             if (child.name === targetName) isTarget = true;
             else if (child._component && child._component.name === targetName) isTarget = true;
@@ -45,50 +41,40 @@
             if (isTarget && !child._reverieRenderHijacked) {
                 child._reverieRenderHijacked = true;
                 
-                // --- THE NUCLEAR OPTION: RENDER HIJACK ---
-                // Instead of fighting HMU's math, we intercept the final draw call to the graphics card.
                 const originalRender = child.render;
                 const originalRenderCanvas = child.renderCanvas;
 
                 const applyReverieSlide = function(target, renderer, originalMethod) {
-                    const originalY = target.y; // Save where HMU wants it to be (68)
+                    const originalY = target.y; 
 
                     if ($gameTemp && $gameTemp._customMenuOpen && $gameTemp._menuCursorDelay > 0) {
                         const progress = (CURSOR_ANIMATION_DELAY - $gameTemp._menuCursorDelay) / CURSOR_ANIMATION_DELAY;
                         const easeOut = 1 - Math.pow(1 - progress, 3);
                         
-                        // Shift it, force PIXI to calculate the matrix, and draw it
-                        target.y = 68 + (SLIDE_Y_OFFSET * (1 - easeOut));
+                        if ($gameTemp._menuCursorDelay === CURSOR_ANIMATION_DELAY) {
+                            target.y = 68 + SLIDE_Y_OFFSET;
+                        } else {
+                            target.y = 68 + (SLIDE_Y_OFFSET * (1 - easeOut));
+                        }
                         target.updateTransform();
                     } else if ($gameTemp && $gameTemp._customMenuOpen) {
                         target.y = 68;
                         target.updateTransform();
                     }
 
-                    // Actually draw the pixels on the screen at our new coordinate
                     if (originalMethod) originalMethod.call(target, renderer);
 
-                    // Instantly put it back so HMU's logic doesn't crash next frame
                     target.y = originalY;
                     target.updateTransform(); 
                 };
 
-                // Hijack WebGL
                 if (originalRender) {
-                    child.render = function(renderer) {
-                        applyReverieSlide(this, renderer, originalRender);
-                    };
+                    child.render = function(renderer) { applyReverieSlide(this, renderer, originalRender); };
                 }
-                
-                // Hijack Canvas fallback
                 if (originalRenderCanvas) {
-                    child.renderCanvas = function(renderer) {
-                        applyReverieSlide(this, renderer, originalRenderCanvas);
-                    };
+                    child.renderCanvas = function(renderer) { applyReverieSlide(this, renderer, originalRenderCanvas); };
                 }
             }
-            
-            // Keep digging deeper into the PIXI tree
             hijackHUDMakerNode(child, targetName);
         }
     };
@@ -102,12 +88,10 @@
             Scene_Base.prototype.update.call(this); 
             this.updateHUDMakerBridge(); 
 
-            // Constantly scan the screen to hijack HUD Maker the millisecond it spawns
             if (this._mementosCatWindow && this._mementosCatWindow.visible) {
                 hijackHUDMakerNode(this, HMU_MEMENTOS_GROUP);
             }
 
-            // --- NATIVE SKELETON SLIDE (For Cursor Sync) ---
             if ($gameTemp._menuCursorDelay > 0) {
                 $gameTemp._menuCursorDelay--;
                 
@@ -140,9 +124,7 @@
     };
 
     Scene_Map.prototype.calcWindowHeight = function(numLines, selectable) {
-        if (selectable) {
-            return Window_Selectable.prototype.fittingHeight(numLines);
-        }
+        if (selectable) return Window_Selectable.prototype.fittingHeight(numLines);
         return Window_Base.prototype.fittingHeight(numLines);
     };
 
@@ -216,12 +198,6 @@
         };
     };
 
-    applySkeletonStyle(Window_MenuCommand);
-    applySkeletonStyle(Window_MenuStatus);
-
-    // =======================================================
-    // 4. CUSTOM DRAW ITEM (FOR ALL BUTTON LISTS)
-    // =======================================================
     const customDrawItemWithCursor = function(index) {
         const rect = this.itemLineRect(index);
         
@@ -235,9 +211,7 @@
         const textWidth = this.textWidth(name);
         const textX = rect.x + CURSOR_DRAW_SIZE + 10; 
         
-        if (DEBUG_MODE) {
-            this.drawText(name, textX, rect.y, textWidth, 'left');
-        }
+        if (DEBUG_MODE) this.drawText(name, textX, rect.y, textWidth, 'left');
 
         if (this.index() === index && this.active && (!$gameTemp || !$gameTemp._menuCursorDelay || $gameTemp._menuCursorDelay <= 0)) {
             const cursorX = textX - CURSOR_DRAW_SIZE - 5; 
@@ -245,10 +219,7 @@
             const cursorBmp = ImageManager.loadSystem(CURSOR_IMAGE_NAME);
             
             if (cursorBmp.isReady()) {
-                this.contents.blt(
-                    cursorBmp, 0, 0, CURSOR_NATIVE_SIZE, CURSOR_NATIVE_SIZE, 
-                    cursorX, cursorY, CURSOR_DRAW_SIZE, CURSOR_DRAW_SIZE 
-                );
+                this.contents.blt(cursorBmp, 0, 0, CURSOR_NATIVE_SIZE, CURSOR_NATIVE_SIZE, cursorX, cursorY, CURSOR_DRAW_SIZE, CURSOR_DRAW_SIZE);
             } else {
                 cursorBmp.addLoadListener(() => this.redrawItem(index));
             }
@@ -263,6 +234,12 @@
             if (this.index() >= 0) this.redrawItem(this.index()); 
         }
     };
+
+    applySkeletonStyle(Window_MenuCommand);
+    applySkeletonStyle(Window_MenuStatus);
+    Window_MenuCommand.prototype.drawItem = customDrawItemWithCursor;
+    Window_MenuCommand.prototype.select = customSelectRefresh;
+    Window_MenuStatus.prototype.select = customSelectRefresh;
 
     // =======================================================
     // 5. BLUEPRINT ALIGNMENT: MAIN MENUS
@@ -282,8 +259,6 @@
         this.addCommand("Mementos", 'mementos'); 
         this.addCommand("Options", 'options');
     };
-    Window_MenuCommand.prototype.drawItem = customDrawItemWithCursor;
-    Window_MenuCommand.prototype.select = customSelectRefresh;
 
     Scene_Map.prototype.statusWindowRect = function() {
         const height = 240; 
@@ -305,10 +280,9 @@
             this.drawText(this.actor(index).name(), rect.x, rect.y, rect.width, 'center');
         }
     };
-    Window_MenuStatus.prototype.select = customSelectRefresh;
 
     // =======================================================
-    // 6. MEMENTOS CATEGORY
+    // 6. MEMENTOS: CATEGORIES
     // =======================================================
     function Window_MenuMementosCat() { this.initialize(...arguments); }
     Window_MenuMementosCat.prototype = Object.create(Window_HorzCommand.prototype);
@@ -316,12 +290,108 @@
     applySkeletonStyle(Window_MenuMementosCat);
     Window_MenuMementosCat.prototype.maxCols = function() { return 5; }; 
     Window_MenuMementosCat.prototype.makeCommandList = function() {
-        this.addCommand("Snacks", 'snacks');
-        this.addCommand("Toys", 'toys');
-        this.addCommand("Important", 'important');
+        this.addCommand("Goodies", 'goodies');
+        this.addCommand("Trinkets", 'trinkets');
+        this.addCommand("Keepsakes", 'keepsakes');
     };
     Window_MenuMementosCat.prototype.drawItem = customDrawItemWithCursor;
     Window_MenuMementosCat.prototype.select = customSelectRefresh;
+
+    // =======================================================
+    // 7. MEMENTOS: ITEM LIST & ACTIONS
+    // =======================================================
+    function Window_MementosItemList() { this.initialize(...arguments); }
+    Window_MementosItemList.prototype = Object.create(Window_ItemList.prototype);
+    Window_MementosItemList.prototype.constructor = Window_MementosItemList;
+    applySkeletonStyle(Window_MementosItemList);
+    Window_MementosItemList.prototype.maxCols = function() { return 1; };
+    Window_MementosItemList.prototype.includes = function(item) {
+        if (!item) return false;
+        const cat = this._category;
+        if (cat === 'goodies') return item.itypeId === 1 && item.meta.Category !== 'Trinkets'; 
+        if (cat === 'trinkets') return item.itypeId === 1 && item.meta.Category === 'Trinkets';
+        if (cat === 'keepsakes') return item.itypeId === 2; 
+        return false;
+    };
+    Window_MementosItemList.prototype.drawItem = function(index) {
+        const item = this.itemAt(index);
+        if (item) {
+            const rect = this.itemLineRect(index);
+            this.contents.clearRect(rect.x - 40, rect.y, rect.width + 80, rect.height);
+            
+            if (DEBUG_MODE) {
+                this.drawText(item.name, rect.x + 34, rect.y, rect.width - 60, 'left');
+                this.drawText("x" + $gameParty.numItems(item), rect.x, rect.y, rect.width, 'right');
+            }
+
+            if (this.index() === index && this.active) {
+                 const cursorBmp = ImageManager.loadSystem(CURSOR_IMAGE_NAME);
+                 if (cursorBmp.isReady()) {
+                     this.contents.blt(cursorBmp, 0, 0, CURSOR_NATIVE_SIZE, CURSOR_NATIVE_SIZE, rect.x, rect.y + (rect.height - CURSOR_DRAW_SIZE) / 2, CURSOR_DRAW_SIZE, CURSOR_DRAW_SIZE);
+                 } else {
+                     cursorBmp.addLoadListener(() => this.redrawItem(index));
+                 }
+            }
+        }
+    };
+    Window_MementosItemList.prototype.select = customSelectRefresh;
+
+    function Window_MementosAction() { this.initialize(...arguments); }
+    Window_MementosAction.prototype = Object.create(Window_Command.prototype);
+    Window_MementosAction.prototype.constructor = Window_MementosAction;
+    applySkeletonStyle(Window_MementosAction);
+    Window_MementosAction.prototype.setItem = function(item) {
+        this._item = item;
+        this.refresh();
+    };
+    Window_MementosAction.prototype.makeCommandList = function() {
+        const item = this._item;
+        
+        let isNeeded = false;
+        // Fix: Explicitly check if the item has ANY effect on ANY current party member
+        if (item && item.itypeId === 1 && item.meta.Category !== 'Trinkets') {
+            if (item.occasion === 0 || item.occasion === 2) { // 0: Always, 2: Menu Screen
+                isNeeded = $gameParty.members().some(actor => {
+                    const action = new Game_Action(actor);
+                    action.setItemObject(item);
+                    return action.testApply(actor);
+                });
+            }
+        }
+
+        const canTrash = item && item.itypeId !== 2; 
+
+        this.addCommand("Use", 'use', isNeeded);
+        this.addCommand("Trash", 'trash', canTrash);
+    };
+    Window_MementosAction.prototype.drawItem = customDrawItemWithCursor;
+    Window_MementosAction.prototype.select = customSelectRefresh;
+
+    function Window_MementosConfirm() { this.initialize(...arguments); }
+    Window_MementosConfirm.prototype = Object.create(Window_Command.prototype);
+    Window_MementosConfirm.prototype.constructor = Window_MementosConfirm;
+    applySkeletonStyle(Window_MementosConfirm);
+    
+    // Fix: Makes Yes/No horizontal
+    Window_MementosConfirm.prototype.maxCols = function() { return 2; }; 
+    
+    Window_MementosConfirm.prototype.itemRect = function(index) {
+        const rect = Window_Command.prototype.itemRect.call(this, index);
+        rect.y += 36; // Pushes the choices down to leave room for the header
+        return rect;
+    };
+    Window_MementosConfirm.prototype.makeCommandList = function() {
+        this.addCommand("Yes", 'yes');
+        this.addCommand("No", 'no');
+    };
+    Window_MementosConfirm.prototype.drawAllItems = function() {
+        if (DEBUG_MODE) {
+            this.drawText("Are you sure?", 0, 0, this.innerWidth, 'center');
+        }
+        Window_Selectable.prototype.drawAllItems.call(this);
+    };
+    Window_MementosConfirm.prototype.drawItem = customDrawItemWithCursor;
+    Window_MementosConfirm.prototype.select = customSelectRefresh;
 
     // =======================================================
     // 8. WIRING IT ALL TOGETHER ON THE MAP
@@ -335,7 +405,11 @@
     Scene_Map.prototype.createCustomOmoriMenu = function() {
         this.createCommandWindow();
         this.createStatusWindow();
+        
         this.createMementosSubWindow();
+        this.createMementosItemList();
+        this.createMementosActionWindow();
+        this.createMementosConfirmWindow();
 
         this._commandWindow.hide();
         this._commandWindow.deactivate();
@@ -368,10 +442,59 @@
         const rect = new Rectangle(MENU_MARGIN_X, y, Graphics.boxWidth - (MENU_MARGIN_X * 2), h);
         this._mementosCatWindow = new Window_MenuMementosCat(rect);
         this._mementosCatWindow._baseY = y; 
+        this._mementosCatWindow.setHandler('ok', this.onMementosCatOk.bind(this));
         this._mementosCatWindow.setHandler('cancel', this.onMementosCancel.bind(this));
         this.addWindow(this._mementosCatWindow);
         this._mementosCatWindow.hide(); 
         this._mementosCatWindow.deactivate();
+    };
+
+    Scene_Map.prototype.createMementosItemList = function() {
+        const w = 300; 
+        const x = Graphics.boxWidth - w - MENU_MARGIN_X; 
+        const y = this._mementosCatWindow.y; 
+        const h = this.calcWindowHeight(4, true); 
+        
+        this._mementosItemWindow = new Window_MementosItemList(new Rectangle(x, y, w, h));
+        this._mementosItemWindow.setHandler('ok', this.onMementosItemOk.bind(this));
+        this._mementosItemWindow.setHandler('cancel', this.onMementosItemCancel.bind(this));
+        this.addWindow(this._mementosItemWindow);
+        this._mementosItemWindow.hide();
+        this._mementosItemWindow.deactivate();
+    };
+
+    Scene_Map.prototype.createMementosActionWindow = function() {
+        const w = 200;
+        const h = this.calcWindowHeight(2, true);
+        
+        // Fix: Zero Y-margin between List and Action window, exact X-alignment with Submenu
+        const x = this._mementosCatWindow.x; 
+        const y = this._mementosItemWindow.y + this._mementosItemWindow.height; 
+        
+        this._mementosActionWindow = new Window_MementosAction(new Rectangle(x, y, w, h));
+        this._mementosActionWindow.setHandler('use', this.onMementosActionUse.bind(this));
+        this._mementosActionWindow.setHandler('trash', this.onMementosActionTrash.bind(this));
+        this._mementosActionWindow.setHandler('cancel', this.onMementosActionCancel.bind(this));
+        this.addWindow(this._mementosActionWindow);
+        this._mementosActionWindow.hide();
+        this._mementosActionWindow.deactivate();
+    };
+
+    Scene_Map.prototype.createMementosConfirmWindow = function() {
+        const w = 200;
+        const h = this.calcWindowHeight(2, true); // Fix: Exact height for 2 rows (header + horizontal choices)
+        
+        // Fix: Zero X-margin between Action window and Confirm window
+        const x = this._mementosActionWindow.x + this._mementosActionWindow.width; 
+        const y = this._mementosActionWindow.y; 
+        
+        this._mementosConfirmWindow = new Window_MementosConfirm(new Rectangle(x, y, w, h));
+        this._mementosConfirmWindow.setHandler('yes', this.onMementosConfirmYes.bind(this));
+        this._mementosConfirmWindow.setHandler('no', this.onMementosConfirmCancel.bind(this));
+        this._mementosConfirmWindow.setHandler('cancel', this.onMementosConfirmCancel.bind(this));
+        this.addWindow(this._mementosConfirmWindow);
+        this._mementosConfirmWindow.hide();
+        this._mementosConfirmWindow.deactivate();
     };
 
     // --- OVERLAY LOGIC HANDLERS ---
@@ -388,6 +511,7 @@
 
     Scene_Map.prototype.closeCustomOmoriMenu = function() {
         $gameTemp._customMenuOpen = false;
+        $gameTemp.mementosUseMode = false;
         
         this._commandWindow.hide();
         this._commandWindow.deactivate();
@@ -395,6 +519,12 @@
         this._statusWindow.deactivate();
         this._mementosCatWindow.hide();
         this._mementosCatWindow.deactivate();
+        this._mementosItemWindow.hide();
+        this._mementosItemWindow.deactivate();
+        this._mementosActionWindow.hide();
+        this._mementosActionWindow.deactivate();
+        this._mementosConfirmWindow.hide();
+        this._mementosConfirmWindow.deactivate();
     };
 
     Scene_Map.prototype.commandPersonal = function() {
@@ -406,11 +536,15 @@
     Scene_Map.prototype.onPersonalCancel = function() {
         this._statusWindow.deselect(); 
         this._statusWindow.deactivate();
-        this._commandWindow.activate();
+        if ($gameTemp.mementosUseMode) {
+            $gameTemp.mementosUseMode = false;
+            this._mementosActionWindow.activate();
+        } else {
+            this._commandWindow.activate();
+        }
     };
 
     Scene_Map.prototype.commandMementos = function() {
-        // Guarantee the node is fully hijacked BEFORE the graphics card paints it
         hijackHUDMakerNode(SceneManager._scene, HMU_MEMENTOS_GROUP);
 
         $gameTemp._menuCursorDelay = CURSOR_ANIMATION_DELAY; 
@@ -419,10 +553,73 @@
         this._mementosCatWindow.select(0); 
     };
 
+    Scene_Map.prototype.onMementosCatOk = function() {
+        this._mementosItemWindow.setCategory(this._mementosCatWindow.currentSymbol());
+        this._mementosItemWindow.show();
+        this._mementosItemWindow.activate();
+        this._mementosItemWindow.select(0);
+    };
+
     Scene_Map.prototype.onMementosCancel = function() {
         this._mementosCatWindow.hide();
         this._mementosCatWindow.deactivate();
         this._commandWindow.activate();
+    };
+
+    Scene_Map.prototype.onMementosItemOk = function() {
+        const item = this._mementosItemWindow.item();
+        if (item) {
+            this._mementosActionWindow.setItem(item);
+            this._mementosActionWindow.show();
+            this._mementosActionWindow.activate();
+            this._mementosActionWindow.select(0);
+        } else {
+            this._mementosItemWindow.activate();
+        }
+    };
+
+    Scene_Map.prototype.onMementosItemCancel = function() {
+        this._mementosItemWindow.hide();
+        this._mementosItemWindow.deactivate();
+        this._mementosCatWindow.activate();
+    };
+
+    Scene_Map.prototype.onMementosActionUse = function() {
+        $gameTemp.mementosUseMode = true; 
+        this._statusWindow.activate();
+        this._statusWindow.select(0);
+    };
+
+    Scene_Map.prototype.onMementosActionTrash = function() {
+        this._mementosConfirmWindow.show();
+        this._mementosConfirmWindow.activate();
+        this._mementosConfirmWindow.select(0);
+    };
+
+    Scene_Map.prototype.onMementosActionCancel = function() {
+        this._mementosActionWindow.hide();
+        this._mementosActionWindow.deactivate();
+        this._mementosItemWindow.activate();
+    };
+
+    Scene_Map.prototype.onMementosConfirmYes = function() {
+        const item = this._mementosActionWindow._item;
+        if (item) {
+            SoundManager.playShop(); 
+            $gameParty.loseItem(item, 1);
+            this._mementosItemWindow.refresh();
+            this._mementosActionWindow.refresh();
+        }
+        this._mementosConfirmWindow.hide();
+        this._mementosConfirmWindow.deactivate();
+        this._mementosActionWindow.hide();
+        this._mementosItemWindow.activate();
+    };
+
+    Scene_Map.prototype.onMementosConfirmCancel = function() {
+        this._mementosConfirmWindow.hide();
+        this._mementosConfirmWindow.deactivate();
+        this._mementosActionWindow.activate();
     };
 
     const _Window_MenuStatus_processOk = Window_MenuStatus.prototype.processOk;
@@ -440,9 +637,36 @@
         const actorIndex = this._statusWindow.index();
         const actor = $gameParty.members()[actorIndex];
         
-        $gameTemp.menuSelectedActorIndex = actorIndex;
-        this._statusWindow.deselect();
-        this._commandWindow.activate();
+        if ($gameTemp.mementosUseMode) {
+            const item = this._mementosActionWindow._item;
+            const action = new Game_Action(actor);
+            action.setItemObject(item);
+            
+            if (action.testApply(actor)) {
+                action.apply(actor);
+                $gameParty.loseItem(item, 1);
+                SoundManager.playUseItem();
+                this._mementosItemWindow.refresh();
+                this._mementosActionWindow.refresh();
+                this._statusWindow.refresh();
+                
+                if ($gameParty.numItems(item) === 0) {
+                    $gameTemp.mementosUseMode = false;
+                    this._statusWindow.deselect();
+                    this._mementosActionWindow.hide();
+                    this._mementosItemWindow.activate();
+                } else {
+                    this._statusWindow.activate(); 
+                }
+            } else {
+                SoundManager.playBuzzer();
+                this._statusWindow.activate();
+            }
+        } else {
+            $gameTemp.menuSelectedActorIndex = actorIndex;
+            this._statusWindow.deselect();
+            this._commandWindow.activate();
+        }
     };
 
     // =======================================================
@@ -458,6 +682,20 @@
         $gameTemp.menuActorIndex = this._statusWindow ? this._statusWindow.index() : -1;
 
         $gameTemp.hudShowMementos = !!(this._mementosCatWindow && this._mementosCatWindow.visible);
+        $gameTemp.hudShowMementosList = !!(this._mementosItemWindow && this._mementosItemWindow.visible);
+        $gameTemp.hudShowMementosAction = !!(this._mementosActionWindow && this._mementosActionWindow.visible);
+        $gameTemp.hudShowMementosConfirm = !!(this._mementosConfirmWindow && this._mementosConfirmWindow.visible);
+
+        if (this._mementosItemWindow && this._mementosItemWindow.active) {
+            const item = this._mementosItemWindow.item();
+            $gameTemp.mementosItemName = item ? item.name : "";
+            $gameTemp.mementosItemDesc = item ? item.description : "";
+            $gameTemp.mementosItemAmount = item ? $gameParty.numItems(item) : 0;
+        } else if (!this._mementosItemWindow || !this._mementosItemWindow.visible) {
+            $gameTemp.mementosItemName = "";
+            $gameTemp.mementosItemDesc = "";
+            $gameTemp.mementosItemAmount = 0;
+        }
     };
 
 })();
