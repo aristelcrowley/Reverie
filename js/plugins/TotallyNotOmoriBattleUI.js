@@ -1,11 +1,7 @@
 /*:
-
 @target MZ
-
 @plugindesc Reverie - Complete Battle UI Override (other override hud was made using HUD Maker Ultra, not in this plugin)
-
 @help must be placed under VisuMZ_0_CoreEngine and VisuMZ_1_BattleCore for proper functionality
-
 @author Aristel
 */
 

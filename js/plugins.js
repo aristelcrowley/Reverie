@@ -16,8 +16,9 @@ var $plugins =
 {"name":"wasd","status":true,"description":"","parameters":{}},
 {"name":"Synrec_TextSounds","status":true,"description":"v1.5 Create Text Sounds","parameters":{"Use Font Size Volume":"false","Default Se":"Cursor3","Default Volume":"90","Default Pitch":"100","Default Pan":"0","Default Pitch Variance":"0","Custom Text Sounds":"[]"}},
 {"name":"CustomTitleScreen","status":true,"description":"Custom Cinematic Title Screen (Sprite-Based, No Window UI)","parameters":{"BackgroundImage":"home","MenuX":"50","MenuY":"300","Spacing":"60","FontSize":"50"}},
-{"name":"BattleUI","status":true,"description":"Reverie - Complete Battle UI Override (other override hud was made using HUD Maker Ultra, not in this plugin)","parameters":{}},
 {"name":"EnemySpritesY","status":true,"description":"Force enemy to bottom with adjustable offset (supports negative)","parameters":{"Bottom Offset":"0"}},
 {"name":"EnemyStateOutline","status":true,"description":"Shows a colored outline on enemies based on their current state.","parameters":{"FranticStateId":"4","HeroicStateId":"3","HopelessStateId":"5","OutlineThickness":"2"}},
-{"name":"FrontAnimatedEnemy","status":true,"description":"Front Facing Animated Enemy Plugin","parameters":{}}
+{"name":"FrontAnimatedEnemy","status":true,"description":"Front Facing Animated Enemy Plugin","parameters":{}},
+{"name":"TotallyNotOmoriBattleUI","status":true,"description":"Reverie - Complete Battle UI Override (other override hud was made using HUD Maker Ultra, not in this plugin)","parameters":{}},
+{"name":"TotallyNotOmoriMainMenuUI","status":true,"description":"Reverie - Complete Main Menu UI Override (ONLY SKELETON HERE, THE ACTUAL UI WAS MADE VIA SRD HUD MAKER ULTRA)","parameters":{}}
 ];
