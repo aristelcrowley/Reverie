@@ -13,7 +13,9 @@
 const CUSTOM_FONT = '"BattleUIFont", sans-serif';
 const SMALL_FONT_SIZE = 20;
 
-const CURSOR_SYMBOL = "👉"; 
+const CURSOR_IMAGE_NAME = "FingerCursor";
+const CURSOR_NATIVE_SIZE = 14; 
+const CURSOR_DRAW_SIZE = 28;
 
 FontManager.load("BattleUIFont", "KleeOne-SemiBold.ttf");
 
@@ -100,7 +102,7 @@ Scene_Battle.prototype.createCancelButton = function() {};
 const topBoxRect = function() {
     const w = Graphics.boxWidth * 0.60; 
     const x = (Graphics.boxWidth - w) / 2;
-    const windowHeight = 135; 
+    const windowHeight = 120; 
     return new Rectangle(x, 0, w, windowHeight); 
 };
 
@@ -111,7 +113,7 @@ applyBlackBox(Window_Help);
 applyBlackBox(Window_BattleLog);
 
 Window_BattleLog.prototype.lineHeight = function() { return 28; }; 
-Window_BattleLog.prototype.maxLines = function() { return 4; }; 
+Window_BattleLog.prototype.maxLines = function() { return 3; }; 
 
 Window_BattleLog.prototype.resetFontSettings = function() {
     this.contents.fontFace = CUSTOM_FONT;
@@ -328,21 +330,42 @@ const setupSubMenu = function(windowClass) {
         let cleanName = cleanText(item.name);
 
         this.contents.fontFace = CUSTOM_FONT;
-        this.contents.fontSize = 20; 
+        this.contents.fontSize = 18; 
         
         this.contents.textColor = "#ffffff"; 
         this.contents.outlineColor = "rgba(0, 0, 0, 0.9)";
         this.contents.outlineWidth = 4;
+
         this.changePaintOpacity(this.isEnabled(item));
 
-        this.drawText(cleanName, rect.x, rect.y, rect.width, 'center'); 
+        const textStartX = 35;      
+        const cursorStartX = 0;    
+
+        const textX = rect.x + textStartX;
+        
+        const actualTextW = this.textWidth(cleanName);
+
+        this.drawText(cleanName, textX, rect.y, actualTextW, 'left'); 
 
         if (this.index() === index) {
-            const textW = this.textWidth(cleanName);
-            const cursorW = this.textWidth(CURSOR_SYMBOL) + 10;
-            const cursorX = rect.x + (rect.width / 2) - (textW / 2) - cursorW;
+            // Apply your custom cursor position here
+            const cursorX = rect.x + cursorStartX; 
+            const cursorY = rect.y + (rect.height - CURSOR_DRAW_SIZE) / 2; 
             
-            this.drawText(CURSOR_SYMBOL, cursorX, rect.y, cursorW + 20, 'left');
+            const cursorBmp = ImageManager.loadSystem(CURSOR_IMAGE_NAME);
+            
+            if (cursorBmp.isReady()) {
+                // .blt(image, SrcX, SrcY, SrcW, SrcH, DestX, DestY, DestW, DestH)
+                this.contents.blt(
+                    cursorBmp, 
+                    0, 0, 
+                    CURSOR_NATIVE_SIZE, CURSOR_NATIVE_SIZE, 
+                    cursorX, cursorY, 
+                    CURSOR_DRAW_SIZE, CURSOR_DRAW_SIZE 
+                );
+            } else {
+                cursorBmp.addLoadListener(() => this.redrawItem(index));
+            }
         }
     };
 
