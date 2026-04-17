@@ -8,7 +8,9 @@
     // =======================================================
     // 1. SETTINGS & CONSTANTS
     // =======================================================
-    const DEBUG_MODE = true; 
+    const DEBUG_MODE = false; 
+    
+    const CURSOR_ANIMATION_DELAY = 25; 
 
     const MENU_MARGIN_X = 12; 
     const MENU_MARGIN_Y = 12; 
@@ -25,8 +27,13 @@
     
     const HMU_EQUIP_TABS_GROUP = "EquipTabsMenu";
     const HMU_EQUIP_LIST_GROUP = "EquipListMenu";
+    const HMU_EQUIP_DESC_GROUP = "EquipDescMenu";
 
-    const CURSOR_ANIMATION_DELAY = 30; 
+    const MAIN_MENU_CURSOR_Y_OFFSET = 7;
+    const MEMENTOS_CAT_CURSOR_Y_OFFSET = 7;
+    const MEMENTOS_LIST_CURSOR_Y_OFFSET = 8;
+    const MEMENTOS_ACTION_CURSOR_Y_OFFSET = 8;
+    const MEMENTOS_CONFIRM_CURSOR_Y_OFFSET = 8;
 
     const SLIDE_Y_OFFSET_CAT     = -68; 
     const SLIDE_Y_OFFSET_LIST    = -68; 
@@ -34,17 +41,16 @@
     const SLIDE_Y_OFFSET_CONFIRM = -110; 
     const SLIDE_Y_OFFSET_DESC    = -108; 
 
-    const SLIDE_Y_OFFSET_EQUIP_TABS = 110;  
-    const SLIDE_X_OFFSET_EQUIP_LIST = 100;  
+    const SLIDE_Y_OFFSET_EQUIP_TABS = 200;  
+    const SLIDE_X_OFFSET_EQUIP_LIST = -200;  
+    const SLIDE_X_OFFSET_EQUIP_DESC = -200;
 
     const MEMENTOS_LIST_VISIBLE_ITEMS = 4;
     const MEMENTOS_LIST_ITEM_PADDING = 0; 
     const MEMENTOS_LIST_ITEM_HEIGHT = 36; 
     const MEMENTOS_LIST_FONT_SIZE = 16; 
     const MEMENTOS_LIST_TEXT_Y_OFFSET = 10; 
-
     const MEMENTOS_LIST_CURSOR_X_OFFSET = -12;
-
     const MEMENTOS_LIST_Y_OFFSET = 3; 
     const MEMENTOS_ACTION_Y_OFFSET = -9; 
     const MEMENTOS_CONFIRM_Y_OFFSET = 5;
@@ -53,9 +59,9 @@
     const ACTOR_CARD_DOWN_OFFSET = 300;  
     const ACTOR_CARD_GAP = 196; 
 
-    const EQUIP_TABS_CURSOR_X_OFFSET = 0;
-    const EQUIP_TABS_CURSOR_Y_OFFSET = 0;
-    const EQUIP_LIST_CURSOR_X_OFFSET = 0;
+    const EQUIP_TABS_CURSOR_X_OFFSET = -14;
+    const EQUIP_TABS_CURSOR_Y_OFFSET = 2;
+    const EQUIP_LIST_CURSOR_X_OFFSET = 8;
     const EQUIP_LIST_CURSOR_Y_OFFSET = 0;
 
     const EQUIP_LIST_RESTING_X = 200; 
@@ -249,8 +255,8 @@
                             this._equipTabsWindow.show();
                             this._equipTabsWindow.activate();
                             
-                            // Always select the Weapon Name (index 1) to skip the unselectable header
                             this._equipTabsWindow.select(1);
+                            $gameTemp.equipDescInTimer = CURSOR_ANIMATION_DELAY;
                         }
                     }
                 }
@@ -300,17 +306,48 @@
                 hijackHUDMakerNode(this, HMU_MEMENTOS_CONFIRM_GROUP, () => this._mementosConfirmWindow.active, isConfirmClosing, confirmDelay, 0, SLIDE_Y_OFFSET_CONFIRM, () => this._mementosConfirmWindow.visible);
             }
 
+            // EQUIP DESC SEQUENCES
+            if ($gameTemp.equipDescInTimer > 0) {
+                $gameTemp.equipDescInTimer--;
+                if ($gameTemp.equipDescInTimer === 0) {
+                    $gameTemp._menuCursorDelay = CURSOR_ANIMATION_DELAY; // Trigger IN animation
+                    $gameTemp.hudShowEquipDesc = true;
+                    $gameTemp.equipDescIsAnimatingIn = true; // FIX 1: Track that the Desc window specifically is animating IN
+                }
+            }
+            
+            // Turn off the specific IN flag when the global cursor delay ends so it doesn't repeat
+            if ($gameTemp._menuCursorDelay === 0) {
+                $gameTemp.equipDescIsAnimatingIn = false;
+            }
+
+            if ($gameTemp.equipDescOutDelay > 0) {
+                $gameTemp.equipDescOutDelay--;
+                if ($gameTemp.equipDescOutDelay === 0) {
+                    $gameTemp.hudShowEquipDesc = false;
+                    this._equipTabsWindow._closingDelay = CURSOR_ANIMATION_DELAY; // Now slide tabs out
+                    $gameTemp.equipAnimState = 5; // Now reverse actor cards
+                    $gameTemp.equipAnimTimer = 0;
+                }
+            }
+
             // EQUIP UI HIJACKS
             if (this._equipTabsWindow && (this._equipTabsWindow.visible || this._equipTabsWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0)) {
                 const isClosing = () => this._equipTabsWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0;
                 const delay = () => $gameTemp._globalClosingDelay > 0 ? $gameTemp._globalClosingDelay : this._equipTabsWindow._closingDelay;
-                hijackHUDMakerNode(this, HMU_EQUIP_TABS_GROUP, () => this._equipTabsWindow.active, isClosing, delay, 0, SLIDE_Y_OFFSET_EQUIP_TABS, () => this._equipTabsWindow.visible);
+                const isActive = () => this._equipTabsWindow.active && !$gameTemp.hudShowEquipDesc; // Prevents tabs from re-sliding
+                hijackHUDMakerNode(this, HMU_EQUIP_TABS_GROUP, isActive, isClosing, delay, 0, SLIDE_Y_OFFSET_EQUIP_TABS, () => this._equipTabsWindow.visible);
             }
             if (this._equipListWindow && (this._equipListWindow.visible || this._equipListWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0)) {
                 const isClosing = () => this._equipListWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0;
                 const delay = () => $gameTemp._globalClosingDelay > 0 ? $gameTemp._globalClosingDelay : this._equipListWindow._closingDelay;
                 hijackHUDMakerNode(this, HMU_EQUIP_LIST_GROUP, () => this._equipListWindow.active, isClosing, delay, SLIDE_X_OFFSET_EQUIP_LIST, 0, () => this._equipListWindow.visible);
             }
+            
+            // FIX 2: Unconditionally hijack the Desc group to completely prevent the 1-frame flash, using the new IN flag and strict visibility checking
+            const isDescClosing = () => $gameTemp.equipDescOutDelay > 0 || $gameTemp._globalClosingDelay > 0;
+            const descDelay = () => $gameTemp._globalClosingDelay > 0 ? $gameTemp._globalClosingDelay : $gameTemp.equipDescOutDelay;
+            hijackHUDMakerNode(this, HMU_EQUIP_DESC_GROUP, () => $gameTemp.equipDescIsAnimatingIn, isDescClosing, descDelay, SLIDE_X_OFFSET_EQUIP_DESC, 0, () => $gameTemp.hudShowEquipDesc);
 
             hijackActorCardNode(this);
 
@@ -333,6 +370,9 @@
                 allWindows.forEach(item => {
                     const win = item.win;
                     if (win && win.active && win.visible) {
+                        // Prevent the Skeleton window from re-sliding when the Description IN animation triggers
+                        if (win === this._equipTabsWindow && $gameTemp.hudShowEquipDesc) return;
+
                         const currentOffsetX = item.offsetX * (1 - easeOut);
                         const currentOffsetY = item.offsetY * (1 - easeOut);
                         win.x = win._baseX + currentOffsetX;
@@ -345,13 +385,16 @@
                     allWindows.forEach(item => {
                         const win = item.win;
                         if (win && win.active && win.visible) {
+                            // Don't mess with the coordinates if it was skipped
+                            if (win === this._equipTabsWindow && $gameTemp.hudShowEquipDesc) return;
+
                             win.x = win._baseX;
                             win.y = win._baseY;
                             if (win.index && win.index() >= 0) win.redrawItem(win.index());
                         }
                     });
                 }
-            } 
+            }
             
             // Global OUT Animation (When leaving entire menu)
             if ($gameTemp._globalClosingDelay > 0) {
@@ -370,7 +413,7 @@
                 });
 
                 if ($gameTemp._globalClosingDelay === 0) {
-                    $gameTemp._customMenuOpen = false; // Finally close it completely
+                    $gameTemp._customMenuOpen = false; 
 
                     if (this._spriteset && this._reverieBlurFilter) {
                         const filters = this._spriteset.filters || [];
@@ -387,6 +430,7 @@
                     $gameTemp.hudShowMementosConfirm = false;
                     $gameTemp.hudShowEquipTabs = false;
                     $gameTemp.hudShowEquipList = false;
+                    $gameTemp.hudShowEquipDesc = false;
 
                     this._commandWindow.hide();
                     this._commandWindow.deactivate();
@@ -541,7 +585,7 @@
 
         if (this.index() === index && this.active) {
             const cursorX = textX - CURSOR_DRAW_SIZE - 5; 
-            const cursorY = rect.y + (rect.height - CURSOR_DRAW_SIZE) / 2; 
+            const cursorY = rect.y + (rect.height - CURSOR_DRAW_SIZE) / 2 + (this.customCursorOffsetY || 0); 
             const cursorBmp = ImageManager.loadSystem(CURSOR_IMAGE_NAME);
             
             if (cursorBmp.isReady()) {
@@ -565,6 +609,7 @@
     applySkeletonStyle(Window_MenuStatus);
     Window_MenuCommand.prototype.drawItem = customDrawItemWithCursor;
     Window_MenuCommand.prototype.select = customSelectRefresh;
+    Window_MenuCommand.prototype.customCursorOffsetY = MAIN_MENU_CURSOR_Y_OFFSET; // Added offset
     Window_MenuStatus.prototype.select = customSelectRefresh;
 
     // =======================================================
@@ -623,6 +668,7 @@
     };
     Window_MenuMementosCat.prototype.drawItem = customDrawItemWithCursor;
     Window_MenuMementosCat.prototype.select = customSelectRefresh;
+    Window_MenuMementosCat.prototype.customCursorOffsetY = MEMENTOS_CAT_CURSOR_Y_OFFSET;
 
     // =======================================================
     // 7. MEMENTOS: ITEM LIST & ACTIONS
@@ -656,7 +702,7 @@
                  const cursorBmp = ImageManager.loadSystem(CURSOR_IMAGE_NAME);
                  if (cursorBmp.isReady()) {
                      const cursorX = rect.x + 10 + MEMENTOS_LIST_CURSOR_X_OFFSET; 
-                     const cursorY = rect.y + (MEMENTOS_LIST_ITEM_HEIGHT - CURSOR_DRAW_SIZE) / 2;
+                     const cursorY = rect.y + (MEMENTOS_LIST_ITEM_HEIGHT - CURSOR_DRAW_SIZE) / 2 + MEMENTOS_LIST_CURSOR_Y_OFFSET;
                      this.contents.blt(cursorBmp, 0, 0, CURSOR_NATIVE_SIZE, CURSOR_NATIVE_SIZE, cursorX, cursorY, CURSOR_DRAW_SIZE, CURSOR_DRAW_SIZE);
                  } else {
                      cursorBmp.addLoadListener(() => this.redrawItem(index));
@@ -695,6 +741,7 @@
     };
     Window_MementosAction.prototype.drawItem = customDrawItemWithCursor;
     Window_MementosAction.prototype.select = customSelectRefresh;
+    Window_MementosAction.prototype.customCursorOffsetY = MEMENTOS_ACTION_CURSOR_Y_OFFSET;
 
     function Window_MementosConfirm() { this.initialize(...arguments); }
     Window_MementosConfirm.prototype = Object.create(Window_Command.prototype);
@@ -720,6 +767,7 @@
     };
     Window_MementosConfirm.prototype.drawItem = customDrawItemWithCursor;
     Window_MementosConfirm.prototype.select = customSelectRefresh;
+    Window_MementosConfirm.prototype.customCursorOffsetY = MEMENTOS_CONFIRM_CURSOR_Y_OFFSET;
 
     // =======================================================
     // 7.5. EQUIP: TABS & LIST (SKELETONS)
@@ -807,15 +855,40 @@
     Window_MenuEquipList.prototype = Object.create(Window_ItemList.prototype);
     Window_MenuEquipList.prototype.constructor = Window_MenuEquipList;
     applySkeletonStyle(Window_MenuEquipList);
+    
     Window_MenuEquipList.prototype.maxCols = function() { return 2; }; 
-    Window_MenuEquipList.prototype.numVisibleRows = function() { return 2; };
     Window_MenuEquipList.prototype.itemHeight = function() { return Math.floor(this.innerHeight / 2); };
+    
+    // ANNIHILATE MZ'S INVISIBLE PADDING: This stops the cursor from drifting/skipping rows
+    Window_MenuEquipList.prototype.rowSpacing = function() { return 0; };
+    Window_MenuEquipList.prototype.colSpacing = function() { return 0; };
+
+    // BULLETPROOF SCROLL SYNC: Forces the engine and HUD Maker to share the exact same integer math
+    Window_MenuEquipList.prototype.topRow = function() {
+        return Math.round(this.scrollY() / this.itemHeight());
+    };
+
+    Window_MenuEquipList.prototype.ensureCursorVisible = function(smooth) {
+        const row = Math.floor(this.index() / this.maxCols());
+        const maxVisible = 2;
+        let currentTopRow = this.topRow();
+        
+        if (row < currentTopRow) {
+            this.scrollTo(0, row * this.itemHeight());
+        } else if (row >= currentTopRow + maxVisible) {
+            this.scrollTo(0, (row - maxVisible + 1) * this.itemHeight());
+        }
+    };
+
     Window_MenuEquipList.prototype.isEnabled = function(item) { return true; };
+    
     Window_MenuEquipList.prototype.setActorAndSlot = function(actor, slotId) {
         this._actor = actor;
         this._slotId = slotId;
+        this.scrollTo(0, 0); // PREVENT MISSING CURSORS: Forces window back to the true top every time
         this.refresh();
     };
+    
     Window_MenuEquipList.prototype.includes = function(item) {
         if (item === null) return true; 
         if (!this._actor) return false;
@@ -823,10 +896,15 @@
         if (item.etypeId !== etypeId) return false;
         return this._actor.canEquip(item);
     };
+    
+    // THE OMORI UX TRICK: Put the "-------" unequip option at the very TOP of the list
     Window_MenuEquipList.prototype.makeItemList = function() {
-        this._data = $gameParty.allItems().filter(item => item !== null && this.includes(item));
-        if (this.includes(null)) this._data.push(null); 
+        this._data = [];
+        if (this.includes(null)) this._data.push(null); // Push Null First!
+        const items = $gameParty.allItems().filter(item => item !== null && this.includes(item));
+        this._data = this._data.concat(items); // Append actual weapons after
     };
+
     Window_MenuEquipList.prototype.drawItem = function(index) {
         const item = this.itemAt(index);
         const rect = this.itemLineRect(index); 
@@ -999,6 +1077,8 @@
         $gameTemp.equipAnimTimer = 0;
         $gameTemp.equipAnimProgress = 0.0;
         $gameTemp.equipSelectedActor = -1;
+        $gameTemp.hudShowEquipDesc = false; 
+        $gameTemp.equipDescOutDelay = 0;
 
         if (!this._reverieBlurFilter) {
             this._reverieBlurFilter = new PIXI.filters.BlurFilter();
@@ -1167,9 +1247,7 @@
 
     Scene_Map.prototype.onEquipTabsCancel = function() {
         this._equipTabsWindow.deactivate();
-        this._equipTabsWindow._closingDelay = CURSOR_ANIMATION_DELAY;
-        $gameTemp.equipAnimState = 5; 
-        $gameTemp.equipAnimTimer = 0;
+        $gameTemp.equipDescOutDelay = CURSOR_ANIMATION_DELAY; 
     };
 
     const _Window_MenuStatus_processOk = Window_MenuStatus.prototype.processOk;
@@ -1256,13 +1334,87 @@
         $gameTemp.hudShowEquipTabs = !!(this._equipTabsWindow && (this._equipTabsWindow.visible || this._equipTabsWindow._closingDelay > 0));
         $gameTemp.hudShowEquipList = !!(this._equipListWindow && (this._equipListWindow.visible || this._equipListWindow._closingDelay > 0));
 
-        if (this._equipListWindow && this._equipListWindow.active) {
-            const item = this._equipListWindow.item();
-            $gameTemp.equipItemName = item ? item.name : "-------";
-            $gameTemp.equipItemDesc = item ? item.description : "";
+        // 1. Track Currently Equipped Names for the Tabs
+        if ($gameTemp.equipSelectedActor >= 0 && $gameParty.members()[$gameTemp.equipSelectedActor]) {
+            const actor = $gameParty.members()[$gameTemp.equipSelectedActor];
+            const equips = actor.equips();
+            $gameTemp.equipCurrentWeaponName = equips[0] ? equips[0].name : "-------";
+            $gameTemp.equipCurrentCharmName = equips[1] ? equips[1].name : "-------";
         } else {
-            $gameTemp.equipItemName = "";
-            $gameTemp.equipItemDesc = "";
+            $gameTemp.equipCurrentWeaponName = "";
+            $gameTemp.equipCurrentCharmName = "";
+        }
+
+        // 2. Track the 4 Visible Grid Items for the List
+        if (this._equipListWindow && this._equipListWindow._data) {
+            // Bypass MZ's broken pixel scroll math and use strict logical cursor rows
+            let cursorRow = Math.floor(this._equipListWindow.index() / this._equipListWindow.maxCols());
+            if (cursorRow < 0) cursorRow = 0;
+            
+            let logicalTopRow = cursorRow > 1 ? cursorRow - 1 : 0;
+            const topIndex = logicalTopRow * this._equipListWindow.maxCols(); 
+            
+            for (let i = 0; i < 4; i++) {
+                const item = this._equipListWindow._data[topIndex + i];
+                if (item === undefined) {
+                    $gameTemp['equipListSlot' + i] = "";
+                } else if (item === null) {
+                    $gameTemp['equipListSlot' + i] = "-------";
+                } else {
+                    $gameTemp['equipListSlot' + i] = item.name;
+                }
+            }
+        }
+
+        // 3. Track the Hovered Item for the Description Window
+        let hoveredEquipItem = null;
+        let isHoveringNothing = false;
+
+        if (this._equipListWindow && this._equipListWindow.active) {
+            hoveredEquipItem = this._equipListWindow.item();
+            if (hoveredEquipItem === null) isHoveringNothing = true; // Hovering the 'Unequip' line
+        } else if (this._equipTabsWindow && this._equipTabsWindow.active && $gameTemp.equipSelectedActor >= 0) {
+            const actor = $gameParty.members()[$gameTemp.equipSelectedActor];
+            const index = this._equipTabsWindow.index();
+            if (index === 1) { // Hovering Weapon Slot
+                hoveredEquipItem = actor.equips()[0];
+                if (!hoveredEquipItem) isHoveringNothing = true;
+            } else if (index === 3) { // Hovering Charm Slot
+                hoveredEquipItem = actor.equips()[1];
+                if (!hoveredEquipItem) isHoveringNothing = true;
+            }
+        }
+
+        // 4. Output Hover Info
+        if (hoveredEquipItem) {
+            $gameTemp.equipHoverName = hoveredEquipItem.name;
+            if (hoveredEquipItem.description) {
+                if (hoveredEquipItem.description.includes('\n')) {
+                    const descParts = hoveredEquipItem.description.split('\n');
+                    $gameTemp.equipHoverDesc1 = descParts[0] || "";
+                    $gameTemp.equipHoverDesc2 = descParts[1] || "";
+                } else if (hoveredEquipItem.description.length > 50) {
+                    let splitIndex = hoveredEquipItem.description.lastIndexOf(' ', 50);
+                    if (splitIndex === -1) splitIndex = 50; 
+                    
+                    $gameTemp.equipHoverDesc1 = hoveredEquipItem.description.substring(0, splitIndex).trim();
+                    $gameTemp.equipHoverDesc2 = hoveredEquipItem.description.substring(splitIndex).trim();
+                } else {
+                    $gameTemp.equipHoverDesc1 = hoveredEquipItem.description;
+                    $gameTemp.equipHoverDesc2 = "";
+                }
+            } else {
+                $gameTemp.equipHoverDesc1 = "";
+                $gameTemp.equipHoverDesc2 = "";
+            }
+        } else if (isHoveringNothing) {
+            $gameTemp.equipHoverName = "-------";
+            $gameTemp.equipHoverDesc1 = "";
+            $gameTemp.equipHoverDesc2 = "";
+        } else {
+            $gameTemp.equipHoverName = "";
+            $gameTemp.equipHoverDesc1 = "";
+            $gameTemp.equipHoverDesc2 = "";
         }
 
         if (this._mementosItemWindow && this._mementosItemWindow.active) {
@@ -1274,9 +1426,9 @@
                     const descParts = item.description.split('\n');
                     $gameTemp.mementosItemDesc1 = descParts[0] || "";
                     $gameTemp.mementosItemDesc2 = descParts[1] || "";
-                } else if (item.description.length > 45) {
-                    let splitIndex = item.description.lastIndexOf(' ', 45);
-                    if (splitIndex === -1) splitIndex = 45; 
+                } else if (item.description.length > 35) {
+                    let splitIndex = item.description.lastIndexOf(' ', 35);
+                    if (splitIndex === -1) splitIndex = 35; 
                     
                     $gameTemp.mementosItemDesc1 = item.description.substring(0, splitIndex).trim();
                     $gameTemp.mementosItemDesc2 = item.description.substring(splitIndex).trim();
