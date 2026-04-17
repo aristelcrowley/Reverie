@@ -20,5 +20,6 @@ var $plugins =
 {"name":"EnemyStateOutline","status":true,"description":"Shows a colored outline on enemies based on their current state.","parameters":{"FranticStateId":"4","HeroicStateId":"3","HopelessStateId":"5","OutlineThickness":"2"}},
 {"name":"FrontAnimatedEnemy","status":true,"description":"Front Facing Animated Enemy Plugin","parameters":{}},
 {"name":"TotallyNotOmoriBattleUI","status":true,"description":"Reverie - Complete Battle UI Override (other override hud was made using HUD Maker Ultra, not in this plugin)","parameters":{}},
-{"name":"TotallyNotOmoriMainMenuUISkeleton","status":true,"description":"Reverie - Complete Main Menu UI Override (ONLY SKELETON HERE, THE ACTUAL UI WAS MADE VIA SRD HUD MAKER ULTRA)","parameters":{}}
+{"name":"TotallyNotOmoriMainMenuUISkeleton","status":true,"description":"Reverie - Complete Main Menu UI Override (ONLY SKELETON HERE, THE ACTUAL UI WAS MADE VIA SRD HUD MAKER ULTRA)","parameters":{}},
+{"name":"NRP_EventCollisionEX","status":true,"description":"v1.04 Extends the collision detection for events.","parameters":{"ConsiderEventMove":"false","SettingList":"[]"}}
 ];
