@@ -10,7 +10,7 @@
     // =======================================================
     const DEBUG_MODE = false; 
     
-    const CURSOR_ANIMATION_DELAY = 25; 
+    const CURSOR_ANIMATION_DELAY = 20; 
 
     const MENU_MARGIN_X = 12; 
     const MENU_MARGIN_Y = 12; 
@@ -28,6 +28,9 @@
     const HMU_EQUIP_TABS_GROUP = "EquipTabsMenu";
     const HMU_EQUIP_LIST_GROUP = "EquipListMenu";
     const HMU_EQUIP_DESC_GROUP = "EquipDescMenu";
+    const HMU_EQUIP_STAT_GROUP = "EquipStatMenu";
+    const HMU_EQUIP_RECT1_GROUP = "EquipRectangle1"; 
+    const HMU_EQUIP_RECT2_GROUP = "EquipRectangle2";
 
     const MAIN_MENU_CURSOR_Y_OFFSET = 7;
     const MEMENTOS_CAT_CURSOR_Y_OFFSET = 7;
@@ -44,6 +47,7 @@
     const SLIDE_Y_OFFSET_EQUIP_TABS = 200;  
     const SLIDE_X_OFFSET_EQUIP_LIST = -200;  
     const SLIDE_X_OFFSET_EQUIP_DESC = -200;
+    const SLIDE_Y_OFFSET_EQUIP_STAT = 200;
 
     const MEMENTOS_LIST_VISIBLE_ITEMS = 4;
     const MEMENTOS_LIST_ITEM_PADDING = 0; 
@@ -164,6 +168,80 @@
                 }
             }
             hijackHUDMakerNode(child, targetName, isActiveFn, isClosingFn, getClosingDelayFn, offsetX, offsetY, isVisibleFn);
+        }
+    };
+
+    const hijackPopNode = (parent, targetName, isActiveFn, isClosingFn, getClosingDelayFn, isVisibleFn, popOrder, floatDir) => {
+        if (!parent || !parent.children) return;
+        
+        for (let i = 0; i < parent.children.length; i++) {
+            const child = parent.children[i];
+            
+            let isTarget = false;
+            if (child.name === targetName) isTarget = true;
+            else if (child._component && child._component.name === targetName) isTarget = true;
+            else if (child.component && child.component.name === targetName) isTarget = true;
+            else if (child._data && (child._data.name === targetName || child._data.Name === targetName)) isTarget = true;
+            else if (child.data && (child.data.name === targetName || child.data.Name === targetName)) isTarget = true;
+            
+            if (isTarget && !child._reveriePopHijacked) {
+                child._reveriePopHijacked = true;
+                
+                const originalRender = child.render;
+                const originalRenderCanvas = child.renderCanvas;
+
+                const applyPopAnim = function(target, renderer, originalMethod) {
+                    const originalY = target.y;
+                    const originalAlpha = target.alpha !== undefined ? target.alpha : 1;
+                    let shouldRender = true;
+                    let currentAlpha = originalAlpha;
+
+                    // Absolute Ban: Menu closed or formally hidden
+                    if (!$gameTemp || !$gameTemp._customMenuOpen || (isVisibleFn && !isVisibleFn())) {
+                        shouldRender = false;
+                    } 
+                    // IN Animation (Split 20 frames into two sequential 10-frame chunks)
+                    else if ($gameTemp._menuCursorDelay > 0 && isActiveFn && isActiveFn()) {
+                        const delay = $gameTemp._menuCursorDelay;
+                        let progress = 0;
+                        if (popOrder === 1) progress = delay > 10 ? (20 - delay) / 10 : 1; // 1st pops frame 20->10
+                        else progress = delay <= 10 ? (10 - delay) / 10 : 0;               // 2nd pops frame 10->0
+                        
+                        currentAlpha = originalAlpha * progress;
+                        if (progress === 0) shouldRender = false;
+                    } 
+                    // OUT Animation (Reversed 10-frame chunks)
+                    else if (isClosingFn && isClosingFn() && getClosingDelayFn) {
+                        const delay = getClosingDelayFn();
+                        let progress = 0;
+                        if (popOrder === 1) progress = delay <= 10 ? delay / 10 : 1;       // 1st leaves frame 10->0
+                        else progress = delay > 10 ? (delay - 10) / 10 : 0;                // 2nd leaves frame 20->10
+                        
+                        currentAlpha = originalAlpha * progress;
+                        if (progress === 0) shouldRender = false;
+                    }
+
+                    if (shouldRender) {
+                        target.alpha = currentAlpha;
+                        
+                        // IDLE FLOAT MATH: Graphics.frameCount ensures endless smooth bobbing
+                        const floatY = Math.sin(Graphics.frameCount * 0.08) * 8 * floatDir;
+                        target.y = originalY + floatY;
+                        
+                        target.updateTransform();
+                        if (originalMethod) originalMethod.call(target, renderer);
+                    }
+
+                    // Restore completely to prevent permanent PIXI coordinate breakage
+                    target.y = originalY;
+                    target.alpha = originalAlpha;
+                    target.updateTransform(); 
+                };
+
+                if (originalRender) child.render = function(renderer) { applyPopAnim(this, renderer, originalRender); };
+                if (originalRenderCanvas) child.renderCanvas = function(renderer) { applyPopAnim(this, renderer, originalRenderCanvas); };
+            }
+            hijackPopNode(child, targetName, isActiveFn, isClosingFn, getClosingDelayFn, isVisibleFn, popOrder, floatDir);
         }
     };
 
@@ -306,26 +384,50 @@
                 hijackHUDMakerNode(this, HMU_MEMENTOS_CONFIRM_GROUP, () => this._mementosConfirmWindow.active, isConfirmClosing, confirmDelay, 0, SLIDE_Y_OFFSET_CONFIRM, () => this._mementosConfirmWindow.visible);
             }
 
-            // EQUIP DESC SEQUENCES
+            // EQUIP CASCADE IN SEQUENCES
             if ($gameTemp.equipDescInTimer > 0) {
                 $gameTemp.equipDescInTimer--;
                 if ($gameTemp.equipDescInTimer === 0) {
-                    $gameTemp._menuCursorDelay = CURSOR_ANIMATION_DELAY; // Trigger IN animation
+                    $gameTemp._menuCursorDelay = CURSOR_ANIMATION_DELAY; // Trigger Desc IN animation
                     $gameTemp.hudShowEquipDesc = true;
-                    $gameTemp.equipDescIsAnimatingIn = true; // FIX 1: Track that the Desc window specifically is animating IN
+                    $gameTemp.equipDescIsAnimatingIn = true; 
+                    
+                    // START STAT IN TIMER (Wait for Desc to finish sliding)
+                    $gameTemp.equipStatInTimer = CURSOR_ANIMATION_DELAY;
+                }
+            }
+
+            if ($gameTemp.equipStatInTimer > 0) {
+                $gameTemp.equipStatInTimer--;
+                if ($gameTemp.equipStatInTimer === 0) {
+                    $gameTemp.equipDescIsAnimatingIn = false;
+                    
+                    $gameTemp._menuCursorDelay = CURSOR_ANIMATION_DELAY; // Trigger Stat IN animation
+                    $gameTemp.hudShowEquipStat = true;
+                    $gameTemp.equipStatIsAnimatingIn = true;
                 }
             }
             
-            // Turn off the specific IN flag when the global cursor delay ends so it doesn't repeat
+            // Turn off specific IN flags when all animations are completely done
             if ($gameTemp._menuCursorDelay === 0) {
                 $gameTemp.equipDescIsAnimatingIn = false;
+                $gameTemp.equipStatIsAnimatingIn = false;
+            }
+
+            // EQUIP CASCADE OUT SEQUENCES (Reverse order: Stat -> Desc -> Tabs)
+            if ($gameTemp.equipStatOutDelay > 0) {
+                $gameTemp.equipStatOutDelay--;
+                if ($gameTemp.equipStatOutDelay === 0) {
+                    $gameTemp.hudShowEquipStat = false;
+                    $gameTemp.equipDescOutDelay = CURSOR_ANIMATION_DELAY; // Now slide Desc out
+                }
             }
 
             if ($gameTemp.equipDescOutDelay > 0) {
                 $gameTemp.equipDescOutDelay--;
                 if ($gameTemp.equipDescOutDelay === 0) {
                     $gameTemp.hudShowEquipDesc = false;
-                    this._equipTabsWindow._closingDelay = CURSOR_ANIMATION_DELAY; // Now slide tabs out
+                    this._equipTabsWindow._closingDelay = CURSOR_ANIMATION_DELAY; // Now slide Tabs out
                     $gameTemp.equipAnimState = 5; // Now reverse actor cards
                     $gameTemp.equipAnimTimer = 0;
                 }
@@ -335,7 +437,7 @@
             if (this._equipTabsWindow && (this._equipTabsWindow.visible || this._equipTabsWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0)) {
                 const isClosing = () => this._equipTabsWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0;
                 const delay = () => $gameTemp._globalClosingDelay > 0 ? $gameTemp._globalClosingDelay : this._equipTabsWindow._closingDelay;
-                const isActive = () => this._equipTabsWindow.active && !$gameTemp.hudShowEquipDesc; // Prevents tabs from re-sliding
+                const isActive = () => this._equipTabsWindow.active && !$gameTemp.hudShowEquipDesc && !$gameTemp.hudShowEquipStat; // Prevents tabs from re-sliding
                 hijackHUDMakerNode(this, HMU_EQUIP_TABS_GROUP, isActive, isClosing, delay, 0, SLIDE_Y_OFFSET_EQUIP_TABS, () => this._equipTabsWindow.visible);
             }
             if (this._equipListWindow && (this._equipListWindow.visible || this._equipListWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0)) {
@@ -344,10 +446,18 @@
                 hijackHUDMakerNode(this, HMU_EQUIP_LIST_GROUP, () => this._equipListWindow.active, isClosing, delay, SLIDE_X_OFFSET_EQUIP_LIST, 0, () => this._equipListWindow.visible);
             }
             
-            // FIX 2: Unconditionally hijack the Desc group to completely prevent the 1-frame flash, using the new IN flag and strict visibility checking
+            // Desc Hijack
             const isDescClosing = () => $gameTemp.equipDescOutDelay > 0 || $gameTemp._globalClosingDelay > 0;
             const descDelay = () => $gameTemp._globalClosingDelay > 0 ? $gameTemp._globalClosingDelay : $gameTemp.equipDescOutDelay;
             hijackHUDMakerNode(this, HMU_EQUIP_DESC_GROUP, () => $gameTemp.equipDescIsAnimatingIn, isDescClosing, descDelay, SLIDE_X_OFFSET_EQUIP_DESC, 0, () => $gameTemp.hudShowEquipDesc);
+
+            // NEW: Stat Hijack
+            const isStatClosing = () => $gameTemp.equipStatOutDelay > 0 || $gameTemp._globalClosingDelay > 0;
+            const statDelay = () => $gameTemp._globalClosingDelay > 0 ? $gameTemp._globalClosingDelay : $gameTemp.equipStatOutDelay;
+            hijackHUDMakerNode(this, HMU_EQUIP_STAT_GROUP, () => $gameTemp.equipStatIsAnimatingIn, isStatClosing, statDelay, 0, SLIDE_Y_OFFSET_EQUIP_STAT, () => $gameTemp.hudShowEquipStat);
+
+            hijackPopNode(this, HMU_EQUIP_RECT1_GROUP, () => $gameTemp.equipStatIsAnimatingIn, isStatClosing, statDelay, () => $gameTemp.hudShowEquipStat, 1, 1);
+            hijackPopNode(this, HMU_EQUIP_RECT2_GROUP, () => $gameTemp.equipStatIsAnimatingIn, isStatClosing, statDelay, () => $gameTemp.hudShowEquipStat, 2, -1);
 
             hijackActorCardNode(this);
 
@@ -431,6 +541,7 @@
                     $gameTemp.hudShowEquipTabs = false;
                     $gameTemp.hudShowEquipList = false;
                     $gameTemp.hudShowEquipDesc = false;
+                    $gameTemp.hudShowEquipStat = false;
 
                     this._commandWindow.hide();
                     this._commandWindow.deactivate();
@@ -1080,6 +1191,11 @@
         $gameTemp.hudShowEquipDesc = false; 
         $gameTemp.equipDescOutDelay = 0;
 
+        $gameTemp.hudShowEquipStat = false; 
+        $gameTemp.equipStatOutDelay = 0;   
+        $gameTemp.equipStatInTimer = 0;     
+        $gameTemp.equipStatIsAnimatingIn = false; 
+
         if (!this._reverieBlurFilter) {
             this._reverieBlurFilter = new PIXI.filters.BlurFilter();
             this._reverieBlurFilter.blur = 8; 
@@ -1247,7 +1363,7 @@
 
     Scene_Map.prototype.onEquipTabsCancel = function() {
         this._equipTabsWindow.deactivate();
-        $gameTemp.equipDescOutDelay = CURSOR_ANIMATION_DELAY; 
+        $gameTemp.equipStatOutDelay = CURSOR_ANIMATION_DELAY;
     };
 
     const _Window_MenuStatus_processOk = Window_MenuStatus.prototype.processOk;
@@ -1447,6 +1563,46 @@
             $gameTemp.mementosItemDesc1 = "";
             $gameTemp.mementosItemDesc2 = "";
             $gameTemp.mementosItemAmount = 0;
+        }
+
+        // 5. Stat Comparison Math
+        if (this._equipTabsWindow || this._equipListWindow) {
+            let statMode = 0; // 0 = Tabs (--), 1 = List Mode
+            if (this._equipListWindow && this._equipListWindow.active && $gameTemp.equipSelectedActor >= 0) {
+                statMode = 1;
+            }
+
+            for (let i = 0; i < 8; i++) { // RMMZ has 8 base params (0: MHP, 1: MMP, 2: ATK, 3: DEF, 4: MAT, 5: MDF, 6: AGI, 7: LUK)
+                if ($gameTemp.equipSelectedActor < 0 || !$gameParty.members()[$gameTemp.equipSelectedActor]) {
+                    $gameTemp['equipStatCurrent' + i] = "";
+                    $gameTemp['equipStatState' + i] = -1;
+                    $gameTemp['equipStatValue' + i] = "";
+                } else {
+                    const actor = $gameParty.members()[$gameTemp.equipSelectedActor];
+                    const currentVal = actor.param(i);
+                    
+                    // ALWAYS expose the current base stat so it shows up in both Tabs and List mode
+                    $gameTemp['equipStatCurrent' + i] = currentVal; 
+
+                    if (statMode === 0) {
+                        $gameTemp['equipStatState' + i] = -1; // -1 means Tabs Mode (---)
+                        $gameTemp['equipStatValue' + i] = "---";
+                    } else {
+                        const slotId = this._equipListWindow._slotId;
+                        const oldItem = actor.equips()[slotId];
+                        const newItem = hoveredEquipItem;
+                        
+                        // Calculate difference (0 if unequipping or replacing nothing)
+                        const diff = (newItem ? newItem.params[i] : 0) - (oldItem ? oldItem.params[i] : 0);
+                        const newVal = currentVal + diff;
+
+                        $gameTemp['equipStatValue' + i] = newVal;
+                        if (diff > 0) $gameTemp['equipStatState' + i] = 2; // Higher (Green)
+                        else if (diff < 0) $gameTemp['equipStatState' + i] = 3; // Lower (Red)
+                        else $gameTemp['equipStatState' + i] = 1; // Same (White)
+                    }
+                }
+            }
         }
     };
 
