@@ -11,6 +11,7 @@
     const DEBUG_MODE = false; 
     
     const CURSOR_ANIMATION_DELAY = 20; 
+    const GLOBAL_CURSOR_X_OFFSET = -6;
 
     const MENU_MARGIN_X = 12; 
     const MENU_MARGIN_Y = 12; 
@@ -19,18 +20,20 @@
     const CURSOR_NATIVE_SIZE = 14; 
     const CURSOR_DRAW_SIZE = 24;
 
-    const HMU_MEMENTOS_GROUP = "MementosMenu";
-    const HMU_MEMENTOS_LIST_GROUP = "MementosListMenu";
-    const HMU_MEMENTOS_ACTION_GROUP = "MementosActionMenu";
-    const HMU_MEMENTOS_CONFIRM_GROUP = "MementosConfirmMenu";
-    const HMU_MEMENTOS_DESC_GROUP = "MementosDescMenu"; 
-    
     const HMU_EQUIP_TABS_GROUP = "EquipTabsMenu";
     const HMU_EQUIP_LIST_GROUP = "EquipListMenu";
     const HMU_EQUIP_DESC_GROUP = "EquipDescMenu";
     const HMU_EQUIP_STAT_GROUP = "EquipStatMenu";
     const HMU_EQUIP_RECT1_GROUP = "EquipRectangle1"; 
     const HMU_EQUIP_RECT2_GROUP = "EquipRectangle2";
+
+    const HMU_MEMENTOS_GROUP = "MementosMenu";
+    const HMU_MEMENTOS_LIST_GROUP = "MementosListMenu";
+    const HMU_MEMENTOS_ACTION_GROUP = "MementosActionMenu";
+    const HMU_MEMENTOS_CONFIRM_GROUP = "MementosConfirmMenu";
+    const HMU_MEMENTOS_DESC_GROUP = "MementosDescMenu"; 
+
+    const HMU_ABILITIES_CAT_GROUP = "AbilitiesMenu";
 
     const MAIN_MENU_CURSOR_Y_OFFSET = 7;
     const MEMENTOS_CAT_CURSOR_Y_OFFSET = 7;
@@ -63,9 +66,9 @@
     const ACTOR_CARD_DOWN_OFFSET = 300;  
     const ACTOR_CARD_GAP = 196; 
 
-    const EQUIP_TABS_CURSOR_X_OFFSET = -14;
+    const EQUIP_TABS_CURSOR_X_OFFSET = -8;
     const EQUIP_TABS_CURSOR_Y_OFFSET = 2;
-    const EQUIP_LIST_CURSOR_X_OFFSET = 8;
+    const EQUIP_LIST_CURSOR_X_OFFSET = 14;
     const EQUIP_LIST_CURSOR_Y_OFFSET = 0;
 
     const EQUIP_LIST_RESTING_X = 200; 
@@ -384,6 +387,12 @@
                 hijackHUDMakerNode(this, HMU_MEMENTOS_CONFIRM_GROUP, () => this._mementosConfirmWindow.active, isConfirmClosing, confirmDelay, 0, SLIDE_Y_OFFSET_CONFIRM, () => this._mementosConfirmWindow.visible);
             }
 
+            if (this._abilitiesCatWindow && (this._abilitiesCatWindow.visible || this._abilitiesCatWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0)) {
+                const isAbilClosing = () => this._abilitiesCatWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0;
+                const abilDelay = () => $gameTemp._globalClosingDelay > 0 ? $gameTemp._globalClosingDelay : this._abilitiesCatWindow._closingDelay;
+                hijackHUDMakerNode(this, HMU_ABILITIES_CAT_GROUP, () => this._abilitiesCatWindow.active, isAbilClosing, abilDelay, 0, SLIDE_Y_OFFSET_CAT, () => this._abilitiesCatWindow.visible); // Reusing Mementos slide height
+            }
+
             // EQUIP CASCADE IN SEQUENCES
             if ($gameTemp.equipDescInTimer > 0) {
                 $gameTemp.equipDescInTimer--;
@@ -466,6 +475,7 @@
                 {win: this._mementosItemWindow, offsetX: 0, offsetY: SLIDE_Y_OFFSET_LIST}, 
                 {win: this._mementosActionWindow, offsetX: 0, offsetY: SLIDE_Y_OFFSET_ACTION}, 
                 {win: this._mementosConfirmWindow, offsetX: 0, offsetY: SLIDE_Y_OFFSET_CONFIRM},
+                {win: this._abilitiesCatWindow, offsetX: 0, offsetY: SLIDE_Y_OFFSET_CAT},
                 {win: this._equipTabsWindow, offsetX: 0, offsetY: SLIDE_Y_OFFSET_EQUIP_TABS},
                 {win: this._equipListWindow, offsetX: SLIDE_X_OFFSET_EQUIP_LIST, offsetY: 0}
             ];
@@ -538,6 +548,7 @@
                     $gameTemp.hudShowMementosList = false;
                     $gameTemp.hudShowMementosAction = false;
                     $gameTemp.hudShowMementosConfirm = false;
+                    $gameTemp.hudShowAbilitiesCat = false;
                     $gameTemp.hudShowEquipTabs = false;
                     $gameTemp.hudShowEquipList = false;
                     $gameTemp.hudShowEquipDesc = false;
@@ -695,7 +706,7 @@
         if (DEBUG_MODE) this.drawText(name, textX, rect.y, textWidth, 'left');
 
         if (this.index() === index && this.active) {
-            const cursorX = textX - CURSOR_DRAW_SIZE - 5; 
+            const cursorX = textX - CURSOR_DRAW_SIZE - 5 + GLOBAL_CURSOR_X_OFFSET;; 
             const cursorY = rect.y + (rect.height - CURSOR_DRAW_SIZE) / 2 + (this.customCursorOffsetY || 0); 
             const cursorBmp = ImageManager.loadSystem(CURSOR_IMAGE_NAME);
             
@@ -735,11 +746,11 @@
     Window_MenuCommand.prototype.maxCols = function() { return 5; };
     Window_MenuCommand.prototype.numVisibleRows = function() { return 1; }; 
     Window_MenuCommand.prototype.makeCommandList = function() {
+        this.addCommand("Tag", 'tag', false); 
         this.addCommand("Equip", 'equip');
-        this.addCommand("Skill", 'skill');    
-        this.addCommand("Bond", 'bond');      
         this.addCommand("Mementos", 'mementos');
-        this.addCommand("Options", 'options');
+        this.addCommand("Abilities", 'abilities'); 
+        this.addCommand("Options", 'options', false);
     };
 
     Scene_Map.prototype.statusWindowRect = function() {
@@ -782,6 +793,24 @@
     Window_MenuMementosCat.prototype.customCursorOffsetY = MEMENTOS_CAT_CURSOR_Y_OFFSET;
 
     // =======================================================
+    // 6.5. ABILITIES: CATEGORIES
+    // =======================================================
+    function Window_MenuAbilitiesCat() { this.initialize(...arguments); }
+    Window_MenuAbilitiesCat.prototype = Object.create(Window_HorzCommand.prototype);
+    Window_MenuAbilitiesCat.prototype.constructor = Window_MenuAbilitiesCat;
+    applySkeletonStyle(Window_MenuAbilitiesCat);
+    
+    Window_MenuAbilitiesCat.prototype.maxCols = function() { return 5; }; 
+    
+    Window_MenuAbilitiesCat.prototype.makeCommandList = function() {
+        this.addCommand("Skills", 'skills');
+        this.addCommand("Bonds", 'bonds');
+    };
+    Window_MenuAbilitiesCat.prototype.drawItem = customDrawItemWithCursor;
+    Window_MenuAbilitiesCat.prototype.select = customSelectRefresh;
+    Window_MenuAbilitiesCat.prototype.customCursorOffsetY = MEMENTOS_CAT_CURSOR_Y_OFFSET; // Reusing Mementos Y offset
+
+    // =======================================================
     // 7. MEMENTOS: ITEM LIST & ACTIONS
     // =======================================================
     function Window_MementosItemList() { this.initialize(...arguments); }
@@ -812,7 +841,7 @@
             if (this.index() === index && this.active) {
                  const cursorBmp = ImageManager.loadSystem(CURSOR_IMAGE_NAME);
                  if (cursorBmp.isReady()) {
-                     const cursorX = rect.x + 10 + MEMENTOS_LIST_CURSOR_X_OFFSET; 
+                     const cursorX = rect.x + 10 + MEMENTOS_LIST_CURSOR_X_OFFSET + GLOBAL_CURSOR_X_OFFSET;; 
                      const cursorY = rect.y + (MEMENTOS_LIST_ITEM_HEIGHT - CURSOR_DRAW_SIZE) / 2 + MEMENTOS_LIST_CURSOR_Y_OFFSET;
                      this.contents.blt(cursorBmp, 0, 0, CURSOR_NATIVE_SIZE, CURSOR_NATIVE_SIZE, cursorX, cursorY, CURSOR_DRAW_SIZE, CURSOR_DRAW_SIZE);
                  } else {
@@ -950,7 +979,7 @@
         if (DEBUG_MODE) this.drawText(name, textX, rect.y, textWidth, 'left');
 
         if (this.index() === index && this.active) {
-            const cursorX = textX - CURSOR_DRAW_SIZE - 5 + EQUIP_TABS_CURSOR_X_OFFSET; 
+            const cursorX = textX - CURSOR_DRAW_SIZE - 5 + EQUIP_TABS_CURSOR_X_OFFSET + GLOBAL_CURSOR_X_OFFSET;; 
             const cursorY = rect.y + (rect.height - CURSOR_DRAW_SIZE) / 2 + EQUIP_TABS_CURSOR_Y_OFFSET; 
             const cursorBmp = ImageManager.loadSystem(CURSOR_IMAGE_NAME);
             if (cursorBmp.isReady()) {
@@ -1028,7 +1057,7 @@
         if (this.index() === index && this.active) {
              const cursorBmp = ImageManager.loadSystem(CURSOR_IMAGE_NAME);
              if (cursorBmp.isReady()) {
-                 const cursorX = rect.x + 10 + EQUIP_LIST_CURSOR_X_OFFSET; 
+                 const cursorX = rect.x + 10 + EQUIP_LIST_CURSOR_X_OFFSET + GLOBAL_CURSOR_X_OFFSET;; 
                  const cursorY = rect.y + (rect.height - CURSOR_DRAW_SIZE) / 2 + EQUIP_LIST_CURSOR_Y_OFFSET;
                  this.contents.blt(cursorBmp, 0, 0, CURSOR_NATIVE_SIZE, CURSOR_NATIVE_SIZE, cursorX, cursorY, CURSOR_DRAW_SIZE, CURSOR_DRAW_SIZE);
              } else {
@@ -1055,6 +1084,8 @@
         this.createMementosItemList();
         this.createMementosActionWindow();
         this.createMementosConfirmWindow();
+
+        this.createAbilitiesCatWindow();
         
         this.createEquipSubWindows();
 
@@ -1095,9 +1126,8 @@
         const rect = this.commandWindowRect();
         this._commandWindow = new Window_MenuCommand(rect);
         this._commandWindow.setHandler('equip', this.commandPersonal.bind(this));
-        this._commandWindow.setHandler('skill', this.commandPersonal.bind(this)); 
-        this._commandWindow.setHandler('bond', this.commandPersonal.bind(this));  
         this._commandWindow.setHandler('mementos', this.commandMementos.bind(this));
+        this._commandWindow.setHandler('abilities', this.commandAbilities.bind(this)); // NEW
         this._commandWindow.setHandler('cancel', this.closeCustomOmoriMenu.bind(this));
         this.addWindow(this._commandWindow);
     };
@@ -1176,6 +1206,21 @@
         this.addWindow(this._mementosConfirmWindow);
         this._mementosConfirmWindow.hide();
         this._mementosConfirmWindow.deactivate();
+    };
+
+    Scene_Map.prototype.createAbilitiesCatWindow = function() {
+        const h = this.calcWindowHeight(1, true);
+        const y = MENU_MARGIN_Y + h; 
+        const rect = new Rectangle(MENU_MARGIN_X, y, Graphics.boxWidth - (MENU_MARGIN_X * 2), h);
+        
+        this._abilitiesCatWindow = new Window_MenuAbilitiesCat(rect);
+        this._abilitiesCatWindow._baseX = rect.x;
+        this._abilitiesCatWindow._baseY = y; 
+        this._abilitiesCatWindow.setHandler('ok', this.onAbilitiesCatOk.bind(this));
+        this._abilitiesCatWindow.setHandler('cancel', this.onAbilitiesCancel.bind(this));
+        this.addWindow(this._abilitiesCatWindow);
+        this._abilitiesCatWindow.hide(); 
+        this._abilitiesCatWindow.deactivate();
     };
 
     // --- OVERLAY LOGIC HANDLERS ---
@@ -1326,6 +1371,24 @@
         this._mementosActionWindow.activate();
     };
 
+    Scene_Map.prototype.commandAbilities = function() {
+        $gameTemp._menuCursorDelay = CURSOR_ANIMATION_DELAY; 
+        this._abilitiesCatWindow.show();
+        this._abilitiesCatWindow.activate();
+        this._abilitiesCatWindow.select(0); 
+    };
+
+    Scene_Map.prototype.onAbilitiesCatOk = function() {
+        SoundManager.playBuzzer();
+        this._abilitiesCatWindow.activate();
+    };
+
+    Scene_Map.prototype.onAbilitiesCancel = function() {
+        this._abilitiesCatWindow.deactivate();
+        this._abilitiesCatWindow._closingDelay = CURSOR_ANIMATION_DELAY;
+        this._commandWindow.activate();
+    };
+
     Scene_Map.prototype.onEquipTabOk = function() {
         this._equipTabsWindow.deactivate();
         $gameTemp._menuCursorDelay = CURSOR_ANIMATION_DELAY; 
@@ -1446,6 +1509,8 @@
         $gameTemp.hudShowMementosAction = showAction && !$gameTemp.mementosUseMode;
         
         $gameTemp.hudShowMementosConfirm = !!(this._mementosConfirmWindow && (this._mementosConfirmWindow.visible || this._mementosConfirmWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0));
+
+        $gameTemp.hudShowAbilitiesCat = !!(this._abilitiesCatWindow && (this._abilitiesCatWindow.visible || this._abilitiesCatWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0));
 
         $gameTemp.hudShowEquipTabs = !!(this._equipTabsWindow && (this._equipTabsWindow.visible || this._equipTabsWindow._closingDelay > 0));
         $gameTemp.hudShowEquipList = !!(this._equipListWindow && (this._equipListWindow.visible || this._equipListWindow._closingDelay > 0));
