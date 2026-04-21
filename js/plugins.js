@@ -24,5 +24,6 @@ var $plugins =
 {"name":"NRP_EventCollisionEX","status":true,"description":"v1.04 Extends the collision detection for events.","parameters":{"ConsiderEventMove":"false","SettingList":"[]"}},
 {"name":"GabeMZ_FogEffects","status":true,"description":"[v2.1.0] Allows to create and display fog effects on maps and battles.","parameters":{"fogSettings":"[\"{\\\"fogFilename\\\":\\\"Fog\\\",\\\"fogOpacity\\\":\\\"225\\\",\\\"fogBlendMode\\\":\\\"0\\\",\\\"fogMoveX\\\":\\\"0.4\\\",\\\"fogMoveY\\\":\\\"0\\\"}\",\"{\\\"fogFilename\\\":\\\"FogGreen\\\",\\\"fogOpacity\\\":\\\"125.0\\\",\\\"fogBlendMode\\\":\\\"0\\\",\\\"fogMoveX\\\":\\\"0.7\\\",\\\"fogMoveY\\\":\\\"0\\\"}\"]","fogInMap":"true","fogInBattle":"true","fogOptionsMenuCommand":"===============================================","commandEnabled":"true","commandName":"Fog Effects"}},
 {"name":"CustomMessageBackground","status":true,"description":"Ganti background window tertentu dengan warna hitam solid dan border putih (style Undertale). Pilihan (choice) pakai ikon tangan di dalam box, teks rata kanan.","parameters":{}},
-{"name":"BattleCommandImage","status":true,"description":"","parameters":{}}
+{"name":"BattleCommandImage","status":true,"description":"","parameters":{}},
+{"name":"QuickSave","status":true,"description":"","parameters":{}}
 ];
