@@ -345,6 +345,8 @@
                 const originalRenderCanvas = child.renderCanvas;
 
                 const applyCardAnim = function(target, renderer, originalMethod) {
+                    if (!$gameTemp || !$gameTemp._customMenuOpen) return;
+
                     const originalX = target.x;
                     const originalY = target.y;
                     
@@ -470,6 +472,8 @@
                 child._reverieMainMenuHijacked = true;
                 const originalRender = child.render;
                 const applyMainMenuAnim = function(target, renderer, originalMethod) {
+                    if (!$gameTemp || !$gameTemp._customMenuOpen) return;
+
                     const originalY = target.y;
                     if ($gameTemp && $gameTemp.passBgOffsetTop) {
                         target.y += $gameTemp.passBgOffsetTop;
