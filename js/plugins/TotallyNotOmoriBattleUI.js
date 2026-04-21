@@ -599,8 +599,17 @@ Window_BattleLog.prototype.displayAction = function(subject, item) {
         }
     }
 
-    let msg1 = (item && item.message1) ? item.message1 : "";
-    let msg2 = (isFailed && item && item.message2) ? item.message2 : "";
+    let msg1 = "";
+    let msg2 = "";
+
+    if (item) {
+        if (DataManager.isSkill(item)) {
+            msg1 = item.message1 ? item.message1 : "";
+            msg2 = (isFailed && item.message2) ? item.message2 : "";
+        } else if (DataManager.isItem(item)) {
+            msg1 = "{USER} uses " + item.name + "!";
+        }
+    }
 
     const printCustomMessage = (msg) => {
         if (msg.match(/\{USER\}/i)) {
