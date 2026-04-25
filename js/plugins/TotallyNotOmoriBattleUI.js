@@ -599,8 +599,17 @@ Window_BattleLog.prototype.displayAction = function(subject, item) {
         }
     }
 
-    let msg1 = (item && item.message1) ? item.message1 : "";
-    let msg2 = (isFailed && item && item.message2) ? item.message2 : "";
+    let msg1 = "";
+    let msg2 = "";
+
+    if (item) {
+        if (DataManager.isSkill(item)) {
+            msg1 = item.message1 ? item.message1 : "";
+            msg2 = (isFailed && item.message2) ? item.message2 : "";
+        } else if (DataManager.isItem(item)) {
+            msg1 = "{USER} uses " + item.name + "!";
+        }
+    }
 
     const printCustomMessage = (msg) => {
         if (msg.match(/\{USER\}/i)) {
@@ -813,5 +822,26 @@ Window_BattleLog.prototype.performHysteriaDamage = function(target, damage) {
     }
 };
 
-})();
+// COMPLETELY KILL MOUSE/TOUCH INPUT IN BATTLE
+const _TouchInput_update = TouchInput.update;
+TouchInput.update = function() {
+    if ($gameParty && $gameParty.inBattle()) {
+        this.clear(); // Instantly wipes all mouse clicks and touch data
+        return;
+    }
+    _TouchInput_update.call(this);
+};
 
+// THE  "FAILED TO LOAD" CRASH BYPASS
+Bitmap.prototype._onError = function() {
+    this._hasError = false;
+    
+    this._isLoading = false;
+    this._loadingState = 'loaded'; 
+    
+    if (this.resize) this.resize(1, 1);
+    
+    if (this._callLoadListeners) this._callLoadListeners();
+};
+
+})();

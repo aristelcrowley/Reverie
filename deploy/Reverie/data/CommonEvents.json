@@ -1,7 +1,0 @@
-[
-null,
-{"id":1,"list":[{"code":355,"indent":0,"parameters":["$gameTroop.members().forEach(e=>{const r=Math.random();e.removeState(3);e.removeState(4);e.removeState(5);if(r<.33){e.addState(4)}else if(r<.66){e.addState(3)}else{e.addState(5)}});"]},{"code":0,"indent":0,"parameters":[]}],"name":"Random State","switchId":1,"trigger":0},
-{"id":2,"list":[{"code":0,"indent":0,"parameters":[]}],"name":"","switchId":1,"trigger":0},
-{"id":3,"list":[{"code":0,"indent":0,"parameters":[]}],"name":"","switchId":1,"trigger":0},
-{"id":4,"list":[{"code":0,"indent":0,"parameters":[]}],"name":"","switchId":1,"trigger":0}
-]

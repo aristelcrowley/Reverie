@@ -600,6 +600,28 @@ if (pConsiderMove) {
 //--------------------------------------------------------------
 
 /**
+ * 【独自】プレイヤーの方向を向く（拡張当たり判定の考慮）
+ */
+const _Game_Event_turnTowardPlayer = Game_Event.prototype.turnTowardPlayer;
+Game_Event.prototype.turnTowardPlayer = function() {
+    if (!this.isCollisionEX()) {
+        _Game_Event_turnTowardPlayer.apply(this, arguments);
+        return;
+    }
+    const aCenterX = this.collisionCenterX(this._x);
+    const aCenterY = this.collisionCenterY(this._y);
+    const bCenterX = $gamePlayer.collisionCenterX($gamePlayer._x);
+    const bCenterY = $gamePlayer.collisionCenterY($gamePlayer._y);
+    const sx = $gameMap.deltaX(aCenterX, bCenterX);
+    const sy = $gameMap.deltaY(aCenterY, bCenterY);
+    if (Math.abs(sx) > Math.abs(sy)) {
+        this.setDirection(sx > 0 ? 4 : 6);
+    } else if (sy !== 0) {
+        this.setDirection(sy > 0 ? 8 : 2);
+    }
+};
+
+/**
  * イベントが移動しない想定なら不要
  */
 if (pConsiderMove) {
@@ -889,10 +911,10 @@ if (pConsiderMove) {
             }
 
         // 進路が左右
-        } else if (d === 4 | d === 6) {
+        } else if (d === 4 || d === 6) {
             if (this.x == x) {
-                const startY = y - this._collisionUp;
-                const endY = y + this._collisionDown;
+                const startY = y - event._collisionUp;
+                const endY = y + event._collisionDown;
 
                 // 該当範囲のＹ座標を確認
                 for (let tmpY = startY; tmpY <= endY; tmpY++) {
@@ -908,5 +930,48 @@ if (pConsiderMove) {
         return this.pos(x, y);
     };
 }
+
+/**
+ * 【独自】対象の方向を向く（拡張当たり判定の考慮）
+ * turnTowardPlayerだけでなく、turnTowardCharacterも拡張に対応させる
+ */
+const _Game_Character_turnTowardCharacter = Game_Character.prototype.turnTowardCharacter;
+Game_Character.prototype.turnTowardCharacter = function(character) {
+    if (this.isCollisionEX && this.isCollisionEX()) {
+        const left = this._x - this._collisionLeft;
+        const right = this._x + this._collisionRight;
+        const top = this._y - this._collisionUp;
+        const bottom = this._y + this._collisionDown;
+        
+        let sx = 0;
+        if (character.x < left) {
+            sx = left - character.x;
+        } else if (character.x > right) {
+            sx = right - character.x;
+        }
+        
+        let sy = 0;
+        if (character.y < top) {
+            sy = top - character.y;
+        } else if (character.y > bottom) {
+            sy = bottom - character.y;
+        }
+        
+        if (Math.abs(sx) > Math.abs(sy)) {
+            this.setDirection(sx > 0 ? 4 : 6);
+        } else if (sy !== 0) {
+            this.setDirection(sy > 0 ? 8 : 2);
+        }
+    } else {
+        _Game_Character_turnTowardCharacter.apply(this, arguments);
+    }
+};
+
+/**
+ * Game_EventのturnTowardPlayerのオーバーライドを修正（より正確なエッジ計算）
+ */
+Game_Event.prototype.turnTowardPlayer = function() {
+    this.turnTowardCharacter($gamePlayer);
+};
 
 })();
