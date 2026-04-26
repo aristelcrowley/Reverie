@@ -37,6 +37,24 @@
  * Event secara mulus berjalan ke titik acak yang BUKAN di sekitarnya,
  * melainkan sengaja menghampiri lantai/ubin yang memiliki Region 
  * sesuai list yang diinputkan di <Dir_Reg>.
+ * 
+ * ----------------------------------------------------------------------------
+ * 3. MODE CUSTOM (Monster Agresif / Guard Mode)
+ * ----------------------------------------------------------------------------
+ * Gunakan tipe pergerakan "Custom" pada event, kemudian pasang salah 
+ * satu tag berikut di Note/Comment:
+ * 
+ * <Mode: Reg>
+ * (Terintegrasi dgn EventRegionRestrict). Monster akan berkeliaran acak. 
+ * Namun jika Player menginjak Region yang sama dengan "wilayah" teritorialnya
+ * (<Reg_Allow: X>), monster akan langsung berubah mengejar Player tiada henti!
+ * Jika Player keluar dari wilayah Region tersebut, monster berhenti mengejar.
+ * 
+ * <Mode: Dist, D>
+ * Monster akan mengejar Player hanya jika Player memasuki jarak blok 
+ * distance D. Misal <Mode: Dist, 2>, saat player berjarak 2 blok (kiri/
+ * kanan/atas/bawah), monster agresif mengejar. Monster akan berhenti 
+ * mengejar jika player berhasil kabur menjauh sejauh D + 2 blok.
  */
 
 (function() {
@@ -50,6 +68,9 @@
         this._smartDestinationY = -1;
         this._movementTypeEx = null; // 'S' atau 'M'
         this._targetRegions = [];
+        this._monsterMode = null; // 'REG' atau 'DIST'
+        this._monsterDist = 0;
+        this._isChasingPlayer = false;
     };
 
     // Bersihkan rute saat pindah halaman
@@ -81,6 +102,9 @@
     Game_Event.prototype.setupSmoothMovementParams = function() {
         this._movementTypeEx = null;
         this._targetRegions = [];
+        this._monsterMode = null;
+        this._monsterDist = 0;
+        this._isChasingPlayer = false;
 
         const readMeta = (metaName) => {
             if (this.event().meta[metaName]) return String(this.event().meta[metaName]).trim();
@@ -89,6 +113,7 @@
 
         let dirMeta = readMeta('Direction');
         let regMeta = readMeta('Dir_Reg');
+        let modeMeta = readMeta('Mode');
 
         const list = this.list();
         if (list && list.length > 0) {
@@ -102,6 +127,10 @@
                     if (matchReg) {
                         regMeta = matchReg[1];
                     }
+                    const matchModeStr = line.parameters[0].match(/<Mode:\s*(.+?)>/i);
+                    if (matchModeStr) {
+                        modeMeta = matchModeStr[1];
+                    }
                 } else {
                     break;
                 }
@@ -113,6 +142,17 @@
         }
         if (regMeta) {
             this._targetRegions = regMeta.split(',').map(n => Number(n.trim()));
+        }
+        if (modeMeta) {
+            if (modeMeta.toLowerCase() === 'reg') {
+                this._monsterMode = 'REG';
+            } else {
+                const distMatch = modeMeta.match(/Dist\s*,\s*(\d+)/i);
+                if (distMatch) {
+                    this._monsterMode = 'DIST';
+                    this._monsterDist = Number(distMatch[1]);
+                }
+            }
         }
     };
 
@@ -126,6 +166,17 @@
             return 0; 
         }
         
+        // Jika moveTypeCustom, dan dalam mode kejar player
+        if (this._moveType === 3) {
+            if (this._monsterMode === 'REG') {
+                const allowedRegs = this.getAllowedRegions();
+                const playerRegion = $gameMap.regionId($gamePlayer.x, $gamePlayer.y);
+                if (allowedRegs.includes(playerRegion)) return 0;
+            } else if (this._monsterMode === 'DIST' && this._isChasingPlayer) {
+                return 0;
+            }
+        }
+
         // Jika mode Random S/M sedang dalam perjalanan ke target, bypass jeda
         if (this._moveType === 1 && (this._movementTypeEx === 'S' || this._movementTypeEx === 'M')) {
             if (this.hasSmartDestination() && !this.isSmartDestinationReached()) {
@@ -172,6 +223,64 @@
             this.updateSmartRandomMovement();
         } else {
             _Game_Event_moveTypeRandom.call(this);
+        }
+    };
+
+    // Override Custom Movement untuk Monster Guard
+    const _Game_Event_moveTypeCustom = Game_Event.prototype.moveTypeCustom;
+    Game_Event.prototype.moveTypeCustom = function() {
+        if (this._monsterMode === 'REG' || this._monsterMode === 'DIST') {
+            this.updateMonsterCustomMovement();
+        } else {
+            _Game_Event_moveTypeCustom.call(this);
+        }
+    };
+
+    Game_Event.prototype.updateMonsterCustomMovement = function() {
+        if (this._monsterMode === 'REG') {
+            const allowedRegs = this.getAllowedRegions(); 
+            const playerRegion = $gameMap.regionId($gamePlayer.x, $gamePlayer.y);
+            
+            // Player menginjak region kekuasaan monster?
+            if (allowedRegs.includes(playerRegion)) {
+                this.moveTypeTowardPlayer(); // Ubah jadi agresif mengejar target!
+            } else {
+                // Kehilangan target, maka jalan-jalan di teritorial regionnya
+                if (this._movementTypeEx === 'S' || this._movementTypeEx === 'M') {
+                    this.updateSmartRandomMovement();
+                } else {
+                    this.moveRandom();
+                }
+            }
+        } 
+        else if (this._monsterMode === 'DIST') {
+            const sx = Math.abs(this.deltaXFrom($gamePlayer.x));
+            const sy = Math.abs(this.deltaYFrom($gamePlayer.y));
+            // Hitung jarak (distance manhattan / taksi)
+            const distance = sx + sy; // Total blok
+            
+            if (!this._isChasingPlayer) {
+                // Jika sedang tidak agresif, cek apakah player masuk ke radius Deteksi
+                if (distance <= this._monsterDist) {
+                    this._isChasingPlayer = true;
+                }
+            } else {
+                // Jika sedang agresif, cek apakah player sudah menjauh (Distance + 2 jarak kabur)
+                if (distance > this._monsterDist + 2) {
+                    this._isChasingPlayer = false; 
+                }
+            }
+            
+            if (this._isChasingPlayer) {
+                this.moveTypeTowardPlayer(); // Mengejar player muter halangan
+            } else {
+                // Jika sudah ga ngejar, jalan muter-muter / patroli
+                if (this._movementTypeEx === 'S' || this._movementTypeEx === 'M') {
+                    this.updateSmartRandomMovement();
+                } else {
+                    this.moveRandom();
+                }
+            }
         }
     };
 
