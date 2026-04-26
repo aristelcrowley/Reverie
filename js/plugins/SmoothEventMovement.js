@@ -202,16 +202,22 @@
 
     Game_Event.prototype.moveTypeTowardPlayer = function() {
         if (this.isNextToPlayer()) {
-            // Jika sudah bersebelahan dengan target (Player), diam di tempat dan menatap target
-            this.turnTowardPlayer();
-            return;
+            if (!this._monsterMode) {
+                // NPC Biasa: diam di tempat dan menatap target jika sudah dekat
+                this.turnTowardPlayer();
+                return;
+            } else {
+                // Monster Agresif: Seruduk/Tabrak langsung untuk trigger Event Touch (Battle)
+                this.moveTowardPlayer();
+                return;
+            }
         }
 
         const dir = this.findDirectionTo($gamePlayer.x, $gamePlayer.y);
         if (dir > 0) {
             this.moveStraight(dir);
         } else {
-            // Jika sedang buntu terhalang benda tak tembus, berdiam diri / putar acak
+            // Jika sedang buntu terhalang benda tak tembus, putar acak
             this.moveRandom();
         }
     };
