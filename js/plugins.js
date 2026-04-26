@@ -27,5 +27,6 @@ var $plugins =
 {"name":"BattleCommandImage","status":true,"description":"","parameters":{}},
 {"name":"QuickSave","status":true,"description":"","parameters":{}},
 {"name":"EventRegionRestrict","status":true,"description":"Membatasi pergerakan Event hanya pada Region ID tertentu.","parameters":{}},
-{"name":"SmoothEventMovement","status":true,"description":"Membuat pergerakan autonomous event menjadi lebih natural/smooth menggunakan pathfinding.","parameters":{}}
+{"name":"SmoothEventMovement","status":true,"description":"Membuat pergerakan autonomous event menjadi lebih natural/smooth menggunakan pathfinding.","parameters":{}},
+{"name":"AnimatedTextEffects","status":true,"description":"Reverie - Custom Animated Message Text Effects","parameters":{}}
 ];
