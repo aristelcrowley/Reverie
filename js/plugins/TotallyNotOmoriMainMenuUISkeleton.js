@@ -8,9 +8,10 @@
     // =======================================================
     // 1. SETTINGS & CONSTANTS
     // =======================================================
-    const DEBUG_MODE = false; 
+    const DEBUG_MODE = true; 
     
     const CURSOR_ANIMATION_DELAY = 20; 
+    const OPT_ANIM_DELAY = 10; 
     const GLOBAL_CURSOR_X_OFFSET = -6;
 
     const MENU_MARGIN_X = 12; 
@@ -38,11 +39,18 @@
     const HMU_ABILITIES_LIST_GROUP = "AbilitiesListMenu";
     const HMU_ABILITIES_DESC_GROUP = "AbilitiesDescMenu";
 
+    const HMU_OPTIONS_CAT_GROUP = "OptionsCatMenu";
+    const HMU_OPTIONS_LIST_GROUP = "OptionsListMenu";
+    const HMU_OPTIONS_DESC_GROUP = "OptionsDescMenu";
+
     const MAIN_MENU_CURSOR_Y_OFFSET = 7;
     const MEMENTOS_CAT_CURSOR_Y_OFFSET = 7;
     const MEMENTOS_LIST_CURSOR_Y_OFFSET = 8;
     const MEMENTOS_ACTION_CURSOR_Y_OFFSET = 8;
     const MEMENTOS_CONFIRM_CURSOR_Y_OFFSET = 8;
+    
+    const OPTIONS_SUB_X_OFFSET = 24;
+    const OPTIONS_LIST_CURSOR_Y_OFFSET = 0;
 
     const SLIDE_Y_OFFSET_CAT     = -68; 
     const SLIDE_Y_OFFSET_LIST    = -68; 
@@ -54,6 +62,8 @@
     const SLIDE_X_OFFSET_EQUIP_LIST = -200;  
     const SLIDE_X_OFFSET_EQUIP_DESC = -200;
     const SLIDE_Y_OFFSET_EQUIP_STAT = 200;
+
+    const SLIDE_Y_OFFSET_OPT_LIST = 200;
 
     const MEMENTOS_LIST_VISIBLE_ITEMS = 4;
     const MEMENTOS_LIST_ITEM_PADDING = 0; 
@@ -95,6 +105,27 @@
     const PASS_BG_ANIM_MAX = 30;
     const PASS_SLOT_DIST_X = 220; 
     const PASS_SLOT_DIST_Y = 220;
+
+    ConfigManager.customResIndex = ConfigManager.customResIndex !== undefined ? ConfigManager.customResIndex : 0;
+    ConfigManager.battleTextSpeed = ConfigManager.battleTextSpeed !== undefined ? ConfigManager.battleTextSpeed : 1;
+    
+    const _ConfigManager_applyData = ConfigManager.applyData;
+    ConfigManager.applyData = function(config) {
+        _ConfigManager_applyData.call(this, config);
+        if (config.alwaysDash !== true) {
+            this.alwaysDash = false; 
+        }
+    };
+
+    const applyResolution = function() {
+        if (ConfigManager.customResIndex === 1) Graphics._requestFullScreen();
+        else Graphics._cancelFullScreen();
+    };
+
+    const OPTIONS_GEN_SUB_START_X = 24; 
+    const OPTIONS_GEN_SUB_SPACING = 120;
+    const OPTIONS_CTRL_KEY_X = 200; 
+    const OPTIONS_CTRL_PAD_X = 320;
 
     // =======================================================
     // 1.1 COMBAT SKILL LOCK OVERRIDE (FORCE 4 SLOTS IN BATTLE)
@@ -159,7 +190,7 @@
     // =======================================================
     // 1.2. PIXI WEBGL HIJACK ENGINE
     // =======================================================
-    const hijackHUDMakerNode = (parent, targetName, isActiveFn, isClosingFn, getClosingDelayFn, offsetX, offsetY, isVisibleFn) => {
+    const hijackHUDMakerNode = (parent, targetName, isActiveFn, isClosingFn, getClosingDelayFn, offsetX, offsetY, isVisibleFn, animDuration = CURSOR_ANIMATION_DELAY) => {
         if (!parent || !parent.children) return;
         
         for (let i = 0; i < parent.children.length; i++) {
@@ -193,10 +224,11 @@
                     }
                     // IN Animation
                     else if ($gameTemp._menuCursorDelay > 0 && isActiveFn && isActiveFn()) {
-                        const progress = (CURSOR_ANIMATION_DELAY - $gameTemp._menuCursorDelay) / CURSOR_ANIMATION_DELAY;
+                        let delayCurrent = Math.min($gameTemp._menuCursorDelay, animDuration);
+                        const progress = (animDuration - delayCurrent) / animDuration;
                         const easeOut = 1 - Math.pow(1 - progress, 3);
                         
-                        if ($gameTemp._menuCursorDelay === CURSOR_ANIMATION_DELAY) {
+                        if (delayCurrent === animDuration) {
                             target.x = originalX + offsetX;
                             target.y = originalY + offsetY;
                         } else {
@@ -207,9 +239,9 @@
                     } 
                     // OUT Animation (Glitch Fixed)
                     else if (isClosingFn && isClosingFn() && getClosingDelayFn) {
-                        const delay = getClosingDelayFn();
+                        const delay = Math.min(getClosingDelayFn(), animDuration);
                         if (delay > 0) {
-                            const progress = (CURSOR_ANIMATION_DELAY - delay) / CURSOR_ANIMATION_DELAY;
+                            const progress = (animDuration - delay) / animDuration;
                             const easeIn = Math.pow(progress, 3);
                             target.x = originalX + (offsetX * easeIn);
                             target.y = originalY + (offsetY * easeIn);
@@ -242,7 +274,7 @@
                     child.renderCanvas = function(renderer) { applyReverieSlide(this, renderer, originalRenderCanvas); };
                 }
             }
-            hijackHUDMakerNode(child, targetName, isActiveFn, isClosingFn, getClosingDelayFn, offsetX, offsetY, isVisibleFn);
+            hijackHUDMakerNode(child, targetName, isActiveFn, isClosingFn, getClosingDelayFn, offsetX, offsetY, isVisibleFn, animDuration);
         }
     };
 
@@ -353,7 +385,7 @@
                     if ($gameTemp && $gameTemp.equipAnimState > 0) {
                         const state = $gameTemp.equipAnimState;
                         const prog = $gameTemp.equipAnimProgress;
-                        const isSelected = ($gameTemp.equipSelectedActor === targetIndex);
+                        const isSelected = ($gameTemp.activeMenuSymbol !== 'options' && $gameTemp.equipSelectedActor === targetIndex);
                         
                         if (!isSelected) {
                             if (state === 1) target.y += (ACTOR_CARD_DOWN_OFFSET * prog);
@@ -494,11 +526,100 @@
     // =======================================================
     const _Scene_Map_update = Scene_Map.prototype.update;
     Scene_Map.prototype.update = function() {
+        if ($gameTemp && $gameTemp.returnToOmoriMenuAfterLoad) {
+            $gameTemp.returnToOmoriMenuAfterLoad = false;
+            // Completely reset all options visuals so it doesn't freeze the screen on return
+            $gameTemp.hudShowOptionsCat = false;
+            $gameTemp.hudShowOptionsList = false;
+            $gameTemp.hudShowOptionsDesc = false;
+            $gameTemp.hudShowOptionsConfirm = false;
+            if (this._optionsCatWindow) { this._optionsCatWindow.hide(); this._optionsCatWindow.deactivate(); }
+            if (this._optionsListWindow) { this._optionsListWindow.hide(); this._optionsListWindow.deactivate(); }
+            if (this._optionsConfirmWindow) { this._optionsConfirmWindow.hide(); this._optionsConfirmWindow.deactivate(); }
+            
+            this.openCustomOmoriMenu();
+            if (this._commandWindow) this._commandWindow.select(4); // Selects "Options" gracefully
+        }
+
         if ($gameTemp && ($gameTemp._customMenuOpen || $gameTemp._globalClosingDelay > 0)) {
             Scene_Base.prototype.update.call(this); 
 
             this.updatePassAnimations();
             this.updateHUDMakerBridge(); 
+
+            // OPTIONS CASCADE IN
+            if ($gameTemp.optCatInTimer > 0) {
+                $gameTemp.optCatInTimer--;
+                if ($gameTemp.optCatInTimer === 0) {
+                    $gameTemp.hudShowOptionsCat = true;
+                    $gameTemp.optCatIsAnimatingIn = true;
+                    
+                    $gameTemp._menuCursorDelay = OPT_ANIM_DELAY;
+                    this._optionsCatWindow.show();
+                    
+                    $gameTemp.optListInTimer = OPT_ANIM_DELAY;
+                }
+            }
+            if ($gameTemp.optListInTimer > 0) {
+                $gameTemp.optListInTimer--;
+                if ($gameTemp.optListInTimer === 0) {
+                    $gameTemp.optCatIsAnimatingIn = false;
+                    $gameTemp.hudShowOptionsList = true;
+                    $gameTemp.optListIsAnimatingIn = true;
+                    
+                    $gameTemp._menuCursorDelay = OPT_ANIM_DELAY;
+                    this._optionsListWindow.setCategory('general');
+                    this._optionsListWindow.deselect();
+                    this._optionsListWindow.show();
+                    
+                    $gameTemp.optDescInTimer = OPT_ANIM_DELAY;
+                }
+            }
+            if ($gameTemp.optDescInTimer > 0) {
+                $gameTemp.optDescInTimer--;
+                if ($gameTemp.optDescInTimer === 0) {
+                    $gameTemp.optListIsAnimatingIn = false;
+                    $gameTemp.hudShowOptionsDesc = true;
+                    $gameTemp.optDescIsAnimatingIn = true;
+                    
+                    $gameTemp._menuCursorDelay = OPT_ANIM_DELAY;
+                }
+            }
+
+            // Options Completion Unfreeze
+            if ($gameTemp.optDescIsAnimatingIn && $gameTemp._menuCursorDelay === 0) {
+                $gameTemp.optDescIsAnimatingIn = false;
+                $gameTemp.optionsAnimActive = true;
+                this._optionsCatWindow.activate();
+                this._optionsCatWindow.select(0);
+            }
+
+            // OPTIONS CASCADE OUT
+            if ($gameTemp.optDescOutTimer > 0) {
+                $gameTemp.optDescOutTimer--;
+                if ($gameTemp.optDescOutTimer === 0) {
+                    $gameTemp.hudShowOptionsDesc = false;
+                    this._optionsListWindow._closingDelay = OPT_ANIM_DELAY;
+                    $gameTemp.optListOutTimer = OPT_ANIM_DELAY;
+                }
+            }
+            if ($gameTemp.optListOutTimer > 0) {
+                $gameTemp.optListOutTimer--;
+                if ($gameTemp.optListOutTimer === 0) {
+                    $gameTemp.hudShowOptionsList = false;
+                    this._optionsCatWindow._closingDelay = OPT_ANIM_DELAY;
+                    $gameTemp.optCatOutTimer = OPT_ANIM_DELAY;
+                }
+            }
+            if ($gameTemp.optCatOutTimer > 0) {
+                $gameTemp.optCatOutTimer--;
+                if ($gameTemp.optCatOutTimer === 0) {
+                    $gameTemp.hudShowOptionsCat = false;
+                    $gameTemp.optionsAnimActive = false;
+                    $gameTemp.equipAnimState = 5; // Reverse actor cards
+                    $gameTemp.equipAnimTimer = 0;
+                }
+            }
 
             // Equip/Abilities Card Animation State Machine
             if ($gameTemp.equipAnimState > 0 && $gameTemp.equipAnimState < 4) {
@@ -507,8 +628,8 @@
                 } else {
                     $gameTemp.equipAnimState++; // Move to next phase
                     $gameTemp.equipAnimTimer = 0;
-                    if ($gameTemp.equipAnimState === 2 && $gameTemp.equipSelectedActor === 0) {
-                        $gameTemp.equipAnimState = 3; // Skip Left Movement if it's the 1st character
+                    if ($gameTemp.equipAnimState === 2 && ($gameTemp.equipSelectedActor === 0 || $gameTemp.activeMenuSymbol === 'options')) {
+                        $gameTemp.equipAnimState = 3; // Skip Left Movement if it's the 1st character OR options
                     }
                     if ($gameTemp.equipAnimState === 4) {
                         if ($gameTemp.activeMenuSymbol === 'equip' && this._equipTabsWindow) {
@@ -522,6 +643,8 @@
                             this._abilitiesCatWindow.show();
                             this._abilitiesCatWindow.activate();
                             this._abilitiesCatWindow.select(0);
+                        } else if ($gameTemp.activeMenuSymbol === 'options') {
+                            $gameTemp.optCatInTimer = 1;
                         }
                     }
                 }
@@ -533,12 +656,14 @@
                 } else {
                     $gameTemp.equipAnimState++;
                     $gameTemp.equipAnimTimer = 0;
-                    if ($gameTemp.equipAnimState === 7 && $gameTemp.equipSelectedActor === 0) {
+                    if ($gameTemp.equipAnimState === 7 && ($gameTemp.equipSelectedActor === 0 || $gameTemp.activeMenuSymbol === 'options')) {
                         $gameTemp.equipAnimState = 8; 
                     }
                     if ($gameTemp.equipAnimState === 9) {
                         $gameTemp.equipAnimState = 0;
-                        if (this._statusWindow) {
+                        if ($gameTemp.activeMenuSymbol === 'options') {
+                            this._commandWindow.activate();
+                        } else if (this._statusWindow) {
                             this._statusWindow.activate(); 
                             this._statusWindow.select($gameTemp.equipSelectedActor); 
                         }
@@ -589,7 +714,23 @@
                 const delay = () => $gameTemp._globalClosingDelay > 0 ? $gameTemp._globalClosingDelay : this._abilitiesListWindow._closingDelay;
                 hijackHUDMakerNode(this, HMU_ABILITIES_LIST_GROUP, () => this._abilitiesListWindow.active, isClosing, delay, SLIDE_X_OFFSET_EQUIP_LIST, 0, () => this._abilitiesListWindow.visible);
             }
+
+            // OPTIONS HIJACKS
+            if (this._optionsCatWindow && (this._optionsCatWindow.visible || this._optionsCatWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0)) {
+                const isOptCatClosing = () => $gameTemp.optCatOutTimer > 0 || $gameTemp._globalClosingDelay > 0;
+                const optCatDelay = () => $gameTemp._globalClosingDelay > 0 ? $gameTemp._globalClosingDelay : $gameTemp.optCatOutTimer;
+                hijackHUDMakerNode(this, HMU_OPTIONS_CAT_GROUP, () => $gameTemp.optCatIsAnimatingIn, isOptCatClosing, optCatDelay, 0, SLIDE_Y_OFFSET_CAT, () => $gameTemp.hudShowOptionsCat, OPT_ANIM_DELAY);
+            }
+            if (this._optionsListWindow && (this._optionsListWindow.visible || this._optionsListWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0)) {
+                const isOptListClosing = () => $gameTemp.optListOutTimer > 0 || $gameTemp._globalClosingDelay > 0;
+                const optListDelay = () => $gameTemp._globalClosingDelay > 0 ? $gameTemp._globalClosingDelay : $gameTemp.optListOutTimer;
+                hijackHUDMakerNode(this, HMU_OPTIONS_LIST_GROUP, () => $gameTemp.optListIsAnimatingIn, isOptListClosing, optListDelay, 0, SLIDE_Y_OFFSET_OPT_LIST, () => $gameTemp.hudShowOptionsList, OPT_ANIM_DELAY);
+            }
             
+            const isOptDescClosing = () => $gameTemp.optionsDescOutTimer > 0 || $gameTemp._globalClosingDelay > 0;
+            const optDescDelay = () => $gameTemp._globalClosingDelay > 0 ? $gameTemp._globalClosingDelay : $gameTemp.optionsDescOutTimer;
+            hijackHUDMakerNode(this, HMU_OPTIONS_DESC_GROUP, () => $gameTemp.optDescIsAnimatingIn, isOptDescClosing, optDescDelay, 0, SLIDE_Y_OFFSET_OPT_LIST, () => $gameTemp.hudShowOptionsDesc, OPT_ANIM_DELAY);
+
             // ABILITIES CASCADE ANIMATIONS
             if ($gameTemp.abilTabsInTimer > 0) {
                 $gameTemp.abilTabsInTimer--;
@@ -726,22 +867,25 @@
                 {win: this._abilitiesTabsWindow, offsetX: 0, offsetY: SLIDE_Y_OFFSET_EQUIP_TABS},
                 {win: this._abilitiesListWindow, offsetX: SLIDE_X_OFFSET_EQUIP_LIST, offsetY: 0},
                 {win: this._equipTabsWindow, offsetX: 0, offsetY: SLIDE_Y_OFFSET_EQUIP_TABS},
-                {win: this._equipListWindow, offsetX: SLIDE_X_OFFSET_EQUIP_LIST, offsetY: 0}
+                {win: this._equipListWindow, offsetX: SLIDE_X_OFFSET_EQUIP_LIST, offsetY: 0},
+                {win: this._optionsCatWindow, offsetX: 0, offsetY: SLIDE_Y_OFFSET_CAT},
+                {win: this._optionsListWindow, offsetX: 0, offsetY: SLIDE_Y_OFFSET_OPT_LIST},
+                {win: this._optionsConfirmWindow, offsetX: 0, offsetY: SLIDE_Y_OFFSET_CONFIRM}
             ];
 
             // IN Animation math
             if ($gameTemp._menuCursorDelay > 0) {
                 $gameTemp._menuCursorDelay--;
                 
-                const progress = (CURSOR_ANIMATION_DELAY - $gameTemp._menuCursorDelay) / CURSOR_ANIMATION_DELAY;
-                const easeOut = 1 - Math.pow(1 - progress, 3);
-
                 allWindows.forEach(item => {
                     const win = item.win;
                     if (win && win.active && win.visible) {
                         // Prevent the Skeleton window from re-sliding when the Description IN animation triggers
                         if (win === this._equipTabsWindow && $gameTemp.hudShowEquipDesc) return;
                         if (win === this._abilitiesTabsWindow && $gameTemp.hudShowAbilitiesDesc) return;
+                        
+                        const progress = (CURSOR_ANIMATION_DELAY - $gameTemp._menuCursorDelay) / CURSOR_ANIMATION_DELAY;
+                        const easeOut = 1 - Math.pow(1 - progress, 3);
 
                         const currentOffsetX = item.offsetX * (1 - easeOut);
                         const currentOffsetY = item.offsetY * (1 - easeOut);
@@ -755,7 +899,6 @@
                     allWindows.forEach(item => {
                         const win = item.win;
                         if (win && win.active && win.visible) {
-                            // Don't mess with the coordinates if it was skipped
                             if (win === this._equipTabsWindow && $gameTemp.hudShowEquipDesc) return;
                             if (win === this._abilitiesTabsWindow && $gameTemp.hudShowAbilitiesDesc) return;
 
@@ -819,6 +962,11 @@
                     $gameTemp.hudShowEquipList = false;
                     $gameTemp.hudShowEquipDesc = false;
                     $gameTemp.hudShowEquipStat = false;
+                    
+                    // Options flags
+                    $gameTemp.hudShowOptionsCat = false;
+                    $gameTemp.hudShowOptionsList = false;
+                    $gameTemp.hudShowOptionsDesc = false;
 
                     this._commandWindow.hide();
                     this._commandWindow.deactivate();
@@ -896,6 +1044,13 @@
         if ($gameTemp.abilDescInTimer > 0) return true;
         if ($gameTemp.abilDescOutDelay > 0) return true;
         if ($gameTemp.abilCatInTimer > 0) return true;
+
+        if ($gameTemp.optCatInTimer > 0) return true;
+        if ($gameTemp.optListInTimer > 0) return true;
+        if ($gameTemp.optDescInTimer > 0) return true;
+        if ($gameTemp.optDescOutTimer > 0) return true;
+        if ($gameTemp.optListOutTimer > 0) return true;
+        if ($gameTemp.optCatOutTimer > 0) return true;
         
         // 2. Prevent the "Invisible Active Window" crash by checking if ANY submenu is currently sliding away
         const scn = SceneManager._scene;
@@ -907,6 +1062,9 @@
             if (scn._abilitiesCatWindow && scn._abilitiesCatWindow._closingDelay > 0) return true;
             if (scn._abilitiesTabsWindow && scn._abilitiesTabsWindow._closingDelay > 0) return true;
             if (scn._abilitiesListWindow && scn._abilitiesListWindow._closingDelay > 0) return true;
+            if (scn._optionsCatWindow && scn._optionsCatWindow._closingDelay > 0) return true;
+            if (scn._optionsListWindow && scn._optionsListWindow._closingDelay > 0) return true;
+            if (scn._optionsConfirmWindow && scn._optionsConfirmWindow._closingDelay > 0) return true;
         }
         return false;
     };
@@ -1051,7 +1209,7 @@
         this.addCommand("Equip", 'equip');
         this.addCommand("Mementos", 'mementos');
         this.addCommand("Abilities", 'abilities'); 
-        this.addCommand("Options", 'options', false);
+        this.addCommand("Options", 'options', true);
     };
 
     Scene_Map.prototype.statusWindowRect = function() {
@@ -1072,6 +1230,297 @@
             const color = isSelected ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 0, 0, 0.3)';
             this.contents.fillRect(rect.x, rect.y, rect.width, rect.height, color);
             this.drawText(this.actor(index).name(), rect.x, rect.y, rect.width, 'center');
+        }
+    };
+
+    // =======================================================
+    // NEW: OPTIONS MENU CONTROLLER & CREATION
+    // =======================================================
+    
+    // 1. OPTIONS CATEGORY (General, Audio, Controls, System)
+    function Window_MenuOptionsCat() { this.initialize(...arguments); }
+    Window_MenuOptionsCat.prototype = Object.create(Window_HorzCommand.prototype);
+    Window_MenuOptionsCat.prototype.constructor = Window_MenuOptionsCat;
+    applySkeletonStyle(Window_MenuOptionsCat);
+    Window_MenuOptionsCat.prototype.maxCols = function() { return 4; }; 
+    Window_MenuOptionsCat.prototype.makeCommandList = function() {
+        this.addCommand("General", 'general');
+        this.addCommand("Audio", 'audio');
+        this.addCommand("Controls", 'controls');
+        this.addCommand("System", 'system');
+    };
+    Window_MenuOptionsCat.prototype.drawItem = customDrawItemWithCursor;
+    Window_MenuOptionsCat.prototype.select = function(index) {
+        customSelectRefresh.call(this, index);
+        if (index >= 0 && SceneManager._scene && SceneManager._scene._optionsListWindow) {
+            const sym = this.commandSymbol(index);
+            if (sym) {
+                SceneManager._scene._optionsListWindow.setCategory(sym);
+                SceneManager._scene._optionsListWindow.deselect();
+            }
+        }
+    };
+    Window_MenuOptionsCat.prototype.customCursorOffsetY = MEMENTOS_CAT_CURSOR_Y_OFFSET;
+
+    // 2. OPTIONS LIST (Handles Indented Sub-Items & Instant Modifiers)
+    function Window_MenuOptionsList() { this.initialize(...arguments); }
+    Window_MenuOptionsList.prototype = Object.create(Window_Command.prototype);
+    Window_MenuOptionsList.prototype.constructor = Window_MenuOptionsList;
+    applySkeletonStyle(Window_MenuOptionsList);
+    
+    Window_MenuOptionsList.prototype.setCategory = function(category) {
+        this._category = category;
+        this._bindMode = 0; // 0 = List, 1 = Edit Keyboard, 2 = Edit Gamepad
+        this.refresh();
+    };
+
+    Window_MenuOptionsList.prototype.itemHeight = function() {
+        if (this._category === 'general') return 88; 
+        return Window_Selectable.prototype.itemHeight.call(this);
+    };
+
+    Window_MenuOptionsList.prototype.itemRect = function(index) {
+        const rect = Window_Command.prototype.itemRect.call(this, index);
+        if (this._category === 'controls') rect.y += 40; 
+        return rect;
+    };
+
+    Window_MenuOptionsList.prototype.clearItem = function(index) {
+        const rect = this.itemRect(index);
+        this.contents.clearRect(0, rect.y, this.contentsWidth(), rect.height);
+    };
+
+    Window_MenuOptionsList.prototype.isCommandEnabled = function(index) {
+        if (this._category === 'controls' && index === 0) return false; 
+        return true;
+    };
+
+    Window_MenuOptionsList.prototype.makeCommandList = function() {
+        const category = this._category || 'general';
+        switch (category) {
+            case 'general':
+                this.addCommand("Screen Resolution", 'opt_res');
+                this.addCommand("Text Skip", 'opt_skip');
+                this.addCommand("Battle Text", 'opt_btl');
+                this.addCommand("Character Movement", 'opt_move');
+                break;
+            case 'audio':
+                this.addCommand("BGM Volume", 'opt_bgm');
+                this.addCommand("BGS Volume", 'opt_bgs');
+                this.addCommand("ME Volume", 'opt_me');
+                this.addCommand("SE Volume", 'opt_se');
+                break;
+            case 'controls':
+                this.addCommand("", 'opt_dummy', false); 
+                this.addCommand("Up", 'key_up', true, 'bind');
+                this.addCommand("Down", 'key_down', true, 'bind');
+                this.addCommand("Left", 'key_left', true, 'bind');
+                this.addCommand("Right", 'key_right', true, 'bind');
+                this.addCommand("Confirm", 'key_ok', true, 'bind');
+                this.addCommand("Cancel / Menu", 'key_cancel', true, 'bind');
+                this.addCommand("Run", 'key_shift', true, 'bind');
+                this.addCommand("Reset Defaults", 'key_reset', true, 'reset');
+                break;
+            case 'system':
+                this.addCommand("Load Game", 'sys_load', true); 
+                this.addCommand("To Title", 'sys_title', true);
+                this.addCommand("Exit Game", 'sys_exit', true);
+                break;
+        }
+    };
+
+    Window_MenuOptionsList.prototype.drawItem = function(index) {
+        if (!this._list || !this._list[index]) return; 
+        
+        const rect = this.itemLineRect(index);
+        const symbol = this.commandSymbol(index);
+        const name = this.commandName(index);
+        const ext = this.currentExt ? this._list[index].ext : null;
+
+        this.changePaintOpacity(this.isCommandEnabled(index));
+        let textX = rect.x + CURSOR_DRAW_SIZE + 10; 
+        
+        let subChoices = [];
+        let subIndex = 0;
+        if (this._category === 'general') {
+            if (symbol === 'opt_res') { subChoices = ["1x", "Fullscreen"]; subIndex = ConfigManager.customResIndex !== undefined ? ConfigManager.customResIndex : 0; }
+            if (symbol === 'opt_skip') { subChoices = ["OFF", "ON"]; subIndex = ConfigManager.commandRemember ? 1 : 0; }
+            if (symbol === 'opt_btl') { subChoices = ["Fast", "Medium", "Slow"]; subIndex = ConfigManager.battleTextSpeed !== undefined ? ConfigManager.battleTextSpeed : 1; }
+            if (symbol === 'opt_move') { subChoices = ["Walk", "Dash"]; subIndex = ConfigManager.alwaysDash ? 1 : 0; }
+        }
+
+        if (DEBUG_MODE) {
+            if (this._category === 'general') {
+                this.drawText(name, textX, rect.y, 250, 'left'); 
+                let curX = textX + OPTIONS_GEN_SUB_START_X; 
+                
+                // Shrink the font size specifically for the subchoices
+                const originalFontSize = this.contents.fontSize;
+                this.contents.fontSize = originalFontSize - 0; 
+                
+                for (let i = 0; i < subChoices.length; i++) {
+                    this.changeTextColor(i === subIndex ? "#ffffff" : "#888888");
+                    const cW = this.textWidth(subChoices[i]) + 20;
+                    this.drawText(subChoices[i], curX, rect.y + 34, cW, 'left'); // Draws cleanly below the parent
+                    
+                    // SECOND CURSOR (Only renders when parent is hovered)
+                    if (this.index() === index && this.active && i === subIndex) {
+                        const c2X = curX - CURSOR_DRAW_SIZE + GLOBAL_CURSOR_X_OFFSET + 4;
+                        const cursorBmp = ImageManager.loadSystem(CURSOR_IMAGE_NAME);
+                        if (cursorBmp.isReady()) {
+                            this.contents.blt(cursorBmp, 0, 0, CURSOR_NATIVE_SIZE, CURSOR_NATIVE_SIZE, c2X, rect.y + 34 + (24 - CURSOR_DRAW_SIZE) / 2, CURSOR_DRAW_SIZE, CURSOR_DRAW_SIZE);
+                        }
+                    }
+                    curX += OPTIONS_GEN_SUB_SPACING;
+                }
+                this.contents.fontSize = originalFontSize;
+                this.resetTextColor();
+            } else if (this._category === 'audio') {
+                this.drawText(name, textX, rect.y, 250, 'left');
+                let vol = 0;
+                if (symbol === 'opt_bgm') vol = ConfigManager.bgmVolume;
+                if (symbol === 'opt_bgs') vol = ConfigManager.bgsVolume;
+                if (symbol === 'opt_me') vol = ConfigManager.meVolume;
+                if (symbol === 'opt_se') vol = ConfigManager.seVolume;
+                this.drawText(vol + "%", rect.x + rect.width - 60, rect.y, 60, 'right'); // Pushed to dead end right
+            } else if (this._category === 'controls' && symbol !== 'key_reset' && symbol !== 'opt_dummy') {
+                this.drawText(name, textX, rect.y, 250, 'left');
+                this.drawText("[Key]", textX + OPTIONS_CTRL_KEY_X, rect.y, 100, 'left');
+                this.drawText("(Pad)", textX + OPTIONS_CTRL_PAD_X, rect.y, 100, 'left');
+            } else {
+                this.drawText(name, textX, rect.y, 250, 'left');
+            }
+        }
+
+        // MAIN CURSOR
+        if (this.index() === index && this.active) {
+            const cursorBmp = ImageManager.loadSystem(CURSOR_IMAGE_NAME);
+            let cursorY = rect.y + (rect.height - CURSOR_DRAW_SIZE) / 2 + OPTIONS_LIST_CURSOR_Y_OFFSET; 
+            if (this._category === 'general') cursorY = rect.y + (34 - CURSOR_DRAW_SIZE) / 2; // Points to top half title
+
+            if (cursorBmp.isReady()) {
+                if (this._category !== 'controls' || this._bindMode === 0) {
+                    const cursorX1 = textX - CURSOR_DRAW_SIZE - 5 + GLOBAL_CURSOR_X_OFFSET; 
+                    this.contents.blt(cursorBmp, 0, 0, CURSOR_NATIVE_SIZE, CURSOR_NATIVE_SIZE, cursorX1, cursorY, CURSOR_DRAW_SIZE, CURSOR_DRAW_SIZE);
+                }
+                
+                // Controls Edit Cursor
+                if (this._category === 'controls' && this._bindMode > 0 && symbol !== 'key_reset') {
+                    const cursorX3 = (this._bindMode === 1 ? textX + OPTIONS_CTRL_KEY_X : textX + OPTIONS_CTRL_PAD_X) - CURSOR_DRAW_SIZE - 5 + GLOBAL_CURSOR_X_OFFSET;
+                    this.contents.blt(cursorBmp, 0, 0, CURSOR_NATIVE_SIZE, CURSOR_NATIVE_SIZE, cursorX3, cursorY, CURSOR_DRAW_SIZE, CURSOR_DRAW_SIZE);
+                }
+
+            } else {
+                cursorBmp.addLoadListener(() => this.redrawItem(index));
+            }
+        }
+    };
+    
+    Window_MenuOptionsList.prototype.select = customSelectRefresh;
+
+    Window_MenuOptionsList.prototype.processCursorMove = function() {
+        if (this.isCursorMovable()) {
+            const lastIndex = this.index();
+            
+            // Block UP/DOWN if in bind mode
+            if (this._bindMode === 0) {
+                if (Input.isRepeated("down")) { this.cursorDown(Input.isTriggered("down")); }
+                if (Input.isRepeated("up")) { this.cursorUp(Input.isTriggered("up")); }
+                if (this.index() !== lastIndex) { SoundManager.playCursor(); }
+            }
+            
+            if (Input.isRepeated("right")) this.cursorRight(Input.isTriggered("right"));
+            if (Input.isRepeated("left")) this.cursorLeft(Input.isTriggered("left"));
+        }
+    };
+
+    Window_MenuOptionsList.prototype.cursorRight = function(trigger) {
+        if (!this.active) return;
+        const symbol = this.commandSymbol(this.index());
+        
+        if (this._category === 'general') {
+            if (!trigger) return; // Prevent holding for General
+            if (symbol === 'opt_res') { ConfigManager.customResIndex = Math.min(1, (ConfigManager.customResIndex !== undefined ? ConfigManager.customResIndex : 0) + 1); setTimeout(applyResolution, 500); }
+            if (symbol === 'opt_skip') ConfigManager.commandRemember = true;
+            if (symbol === 'opt_btl') ConfigManager.battleTextSpeed = Math.min(2, (ConfigManager.battleTextSpeed !== undefined ? ConfigManager.battleTextSpeed : 1) + 1);
+            if (symbol === 'opt_move') ConfigManager.alwaysDash = true;
+            SoundManager.playCursor();
+            this.redrawItem(this.index());
+        } 
+        else if (this._category === 'audio') {
+            let amt = trigger ? 1 : 5; // Tap = 1, Hold = 5
+            if (symbol === 'opt_bgm') { ConfigManager.bgmVolume = Math.min(100, ConfigManager.bgmVolume + amt); AudioManager.playBgm({name: "", volume: ConfigManager.bgmVolume}); }
+            if (symbol === 'opt_bgs') ConfigManager.bgsVolume = Math.min(100, ConfigManager.bgsVolume + amt);
+            if (symbol === 'opt_me') ConfigManager.meVolume = Math.min(100, ConfigManager.meVolume + amt);
+            if (symbol === 'opt_se') ConfigManager.seVolume = Math.min(100, ConfigManager.seVolume + amt);
+            SoundManager.playCursor();
+            this.redrawItem(this.index());
+        }
+        else if (this._category === 'controls' && this._bindMode > 0) {
+            if (!trigger) return;
+            this._bindMode = 2; // Jump to Gamepad
+            SoundManager.playCursor();
+            this.redrawItem(this.index());
+        }
+    };
+
+    Window_MenuOptionsList.prototype.cursorLeft = function(trigger) {
+        if (!this.active) return;
+        const symbol = this.commandSymbol(this.index());
+        
+        if (this._category === 'general') {
+            if (!trigger) return; 
+            if (symbol === 'opt_res') { ConfigManager.customResIndex = Math.max(0, (ConfigManager.customResIndex !== undefined ? ConfigManager.customResIndex : 0) - 1); setTimeout(applyResolution, 500); }
+            if (symbol === 'opt_skip') ConfigManager.commandRemember = false;
+            if (symbol === 'opt_btl') ConfigManager.battleTextSpeed = Math.max(0, (ConfigManager.battleTextSpeed !== undefined ? ConfigManager.battleTextSpeed : 1) - 1);
+            if (symbol === 'opt_move') ConfigManager.alwaysDash = false;
+            SoundManager.playCursor();
+            this.redrawItem(this.index());
+        } 
+        else if (this._category === 'audio') {
+            let amt = trigger ? 1 : 5; 
+            if (symbol === 'opt_bgm') { ConfigManager.bgmVolume = Math.max(0, ConfigManager.bgmVolume - amt); AudioManager.playBgm({name: "", volume: ConfigManager.bgmVolume}); }
+            if (symbol === 'opt_bgs') ConfigManager.bgsVolume = Math.max(0, ConfigManager.bgsVolume - amt);
+            if (symbol === 'opt_me') ConfigManager.meVolume = Math.max(0, ConfigManager.meVolume - amt);
+            if (symbol === 'opt_se') ConfigManager.seVolume = Math.max(0, ConfigManager.seVolume - amt);
+            SoundManager.playCursor();
+            this.redrawItem(this.index());
+        }
+        else if (this._category === 'controls' && this._bindMode > 0) {
+            if (!trigger) return;
+            this._bindMode = 1; // Jump to Keyboard
+            SoundManager.playCursor();
+            this.redrawItem(this.index());
+        }
+    };
+
+    Window_MenuOptionsList.prototype.processOk = function() {
+        const symbol = this.commandSymbol(this.index());
+        if (this._category === 'system') {
+            if (symbol === 'sys_load') { SoundManager.playOk(); this.callHandler('sys_load'); } 
+            else if (symbol === 'sys_title' || symbol === 'sys_exit') { SoundManager.playOk(); this.callHandler('sys_confirm'); }
+        } else if (this._category === 'controls') {
+            if (symbol === 'key_reset') {
+                SoundManager.playOk(); // Trigger reset
+            } else {
+                if (this._bindMode === 0) {
+                    this._bindMode = 1; // Enter edit mode
+                    SoundManager.playOk();
+                    this.redrawItem(this.index());
+                } else {
+                    SoundManager.playOk(); // Trigger future rebind logic
+                }
+            }
+        }
+    };
+
+    Window_MenuOptionsList.prototype.processCancel = function() {
+        if (this._category === 'controls' && this._bindMode > 0) {
+            this._bindMode = 0; // Exit edit mode
+            SoundManager.playCancel();
+            this.redrawItem(this.index());
+        } else {
+            Window_Command.prototype.processCancel.call(this);
         }
     };
 
@@ -1346,7 +1795,6 @@
         this.refresh();
     };
     Window_MenuAbilitiesTabs.prototype.makeCommandList = function() {
-        // Always build exactly 4 slots so the engine doesn't crash on startup
         for (let i = 0; i < 4; i++) {
             let name = "-------";
             if (this._actor) {
@@ -1356,7 +1804,7 @@
                 const skillId = arr[i];
                 if (skillId && $dataSkills[skillId]) name = $dataSkills[skillId].name;
             }
-            this.addCommand(name, 'ability_slot', true, { slotId: i }); // Always enabled
+            this.addCommand(name, 'ability_slot', true, { slotId: i }); 
         }
     };
     Window_MenuAbilitiesTabs.prototype.drawItem = function(index) {
@@ -1593,7 +2041,6 @@
         this.addCommand("Charm", 'charm', false);   
         this.addCommand(cName, 'charm_name', canEquip);
     };
-    // Force skipping over unselectable headers safely
     Window_MenuEquipTabs.prototype.cursorDown = function(wrap) {
         Window_Selectable.prototype.cursorDown.call(this, wrap);
         const symbol = this.commandSymbol(this.index());
@@ -1640,16 +2087,11 @@
     
     Window_MenuEquipList.prototype.maxCols = function() { return 2; }; 
     Window_MenuEquipList.prototype.itemHeight = function() { return Math.floor(this.innerHeight / 2); };
-    
-    // ANNIHILATE MZ'S INVISIBLE PADDING: This stops the cursor from drifting/skipping rows
     Window_MenuEquipList.prototype.rowSpacing = function() { return 0; };
     Window_MenuEquipList.prototype.colSpacing = function() { return 0; };
-
-    // BULLETPROOF SCROLL SYNC: Forces the engine and HUD Maker to share the exact same integer math
     Window_MenuEquipList.prototype.topRow = function() {
         return Math.round(this.scrollY() / this.itemHeight());
     };
-
     Window_MenuEquipList.prototype.ensureCursorVisible = function(smooth) {
         const row = Math.floor(this.index() / this.maxCols());
         const maxVisible = 2;
@@ -1663,14 +2105,12 @@
     };
 
     Window_MenuEquipList.prototype.isEnabled = function(item) { return true; };
-    
     Window_MenuEquipList.prototype.setActorAndSlot = function(actor, slotId) {
         this._actor = actor;
         this._slotId = slotId;
-        this.scrollTo(0, 0); // PREVENT MISSING CURSORS: Forces window back to the true top every time
+        this.scrollTo(0, 0); 
         this.refresh();
     };
-    
     Window_MenuEquipList.prototype.includes = function(item) {
         if (item === null) return true; 
         if (!this._actor) return false;
@@ -1678,13 +2118,11 @@
         if (item.etypeId !== etypeId) return false;
         return this._actor.canEquip(item);
     };
-    
-    // THE OMORI UX TRICK: Put the "-------" unequip option at the very TOP of the list
     Window_MenuEquipList.prototype.makeItemList = function() {
         this._data = [];
-        if (this.includes(null)) this._data.push(null); // Push Null First!
+        if (this.includes(null)) this._data.push(null); 
         const items = $gameParty.allItems().filter(item => item !== null && this.includes(item));
-        this._data = this._data.concat(items); // Append actual weapons after
+        this._data = this._data.concat(items); 
     };
 
     Window_MenuEquipList.prototype.drawItem = function(index) {
@@ -1729,13 +2167,136 @@
         this.createMementosConfirmWindow();
 
         this.createAbilitiesSubWindows();
-        
         this.createEquipSubWindows();
+
+        this.createOptionsSubWindows();
 
         this._commandWindow.hide();
         this._commandWindow.deactivate();
         this._statusWindow.hide();
         this._statusWindow.deactivate();
+    };
+
+    // 3. OPTIONS EXIT CONFIRMATION
+    function Window_OptionsConfirm() { this.initialize(...arguments); }
+    Window_OptionsConfirm.prototype = Object.create(Window_Command.prototype);
+    Window_OptionsConfirm.prototype.constructor = Window_OptionsConfirm;
+    applySkeletonStyle(Window_OptionsConfirm);
+    Window_OptionsConfirm.prototype.maxCols = function() { return 2; }; 
+    Window_OptionsConfirm.prototype.itemRect = function(index) {
+        const rect = Window_Command.prototype.itemRect.call(this, index);
+        rect.y += 36; 
+        return rect;
+    };
+    Window_OptionsConfirm.prototype.makeCommandList = function() {
+        this.addCommand("Yes", 'yes');
+        this.addCommand("No", 'no');
+    };
+    Window_OptionsConfirm.prototype.drawAllItems = function() {
+        if (DEBUG_MODE) {
+            const title = $gameTemp.optionsConfirmType === 'sys_title' ? "Return to title screen?" : "Do you want to quit?";
+            this.drawText(title, 0, 0, this.innerWidth, 'center');
+        }
+        Window_Selectable.prototype.drawAllItems.call(this);
+    };
+    Window_OptionsConfirm.prototype.drawItem = customDrawItemWithCursor;
+    Window_OptionsConfirm.prototype.select = customSelectRefresh;
+    Window_OptionsConfirm.prototype.customCursorOffsetY = MEMENTOS_CONFIRM_CURSOR_Y_OFFSET;
+
+    Scene_Map.prototype.createOptionsSubWindows = function() {
+        const cmdH = this.calcWindowHeight(1, true);
+        const y = MENU_MARGIN_Y + cmdH; 
+        const h = this.calcWindowHeight(6, true);
+        const fullWidth = Graphics.boxWidth - (MENU_MARGIN_X * 2);
+        
+        const catRect = new Rectangle(MENU_MARGIN_X, y, fullWidth, cmdH);
+        this._optionsCatWindow = new Window_MenuOptionsCat(catRect);
+        this._optionsCatWindow._baseX = catRect.x;
+        this._optionsCatWindow._baseY = y; 
+        this._optionsCatWindow.setHandler('ok', this.onOptionsCatOk.bind(this));
+        this._optionsCatWindow.setHandler('cancel', this.onOptionsCancel.bind(this));
+        this.addWindow(this._optionsCatWindow);
+        this._optionsCatWindow.hide(); 
+        this._optionsCatWindow.deactivate();
+
+        const listY = y + cmdH;
+        const listH = Graphics.boxHeight - listY - MENU_MARGIN_Y;
+        this._optionsListWindow = new Window_MenuOptionsList(new Rectangle(MENU_MARGIN_X, listY, fullWidth, listH));
+        this._optionsListWindow._baseX = MENU_MARGIN_X;
+        this._optionsListWindow._baseY = listY; 
+        this._optionsListWindow.setHandler('cancel', this.onOptionsListCancel.bind(this));
+        this._optionsListWindow.setHandler('sys_load', this.onOptSysLoad.bind(this));
+        this._optionsListWindow.setHandler('sys_confirm', this.onOptSysConfirmOpen.bind(this));
+        this.addWindow(this._optionsListWindow);
+        this._optionsListWindow.hide();
+        this._optionsListWindow.deactivate();
+
+        const confW = 400;
+        const confH = this.calcWindowHeight(2, true);
+        const confX = (Graphics.boxWidth - confW) / 2; // Centers the box X
+        const confY = (Graphics.boxHeight - confH) / 2; // Centers the box Y
+        this._optionsConfirmWindow = new Window_OptionsConfirm(new Rectangle(confX, confY, confW, confH));
+        this._optionsConfirmWindow._baseX = confX;
+        this._optionsConfirmWindow._baseY = confY;
+        this._optionsConfirmWindow.setHandler('yes', this.onOptConfirmYes.bind(this));
+        this._optionsConfirmWindow.setHandler('no', this.onOptConfirmNo.bind(this));
+        this._optionsConfirmWindow.setHandler('cancel', this.onOptConfirmNo.bind(this));
+        this.addWindow(this._optionsConfirmWindow);
+        this._optionsConfirmWindow.hide();
+        this._optionsConfirmWindow.deactivate();
+    };
+
+    Scene_Map.prototype.commandOptions = function() {
+        $gameTemp.activeMenuSymbol = 'options';
+        $gameTemp.equipAnimState = 1; 
+        $gameTemp.equipAnimTimer = 0;
+        this._commandWindow.deactivate();
+    };
+
+    Scene_Map.prototype.onOptionsCancel = function() {
+        this._optionsCatWindow.deactivate();
+        this._optionsCatWindow.deselect();
+        $gameTemp.optDescOutTimer = OPT_ANIM_DELAY;
+        ConfigManager.save(); 
+    };
+
+    Scene_Map.prototype.onOptionsCatOk = function() {
+        this._optionsCatWindow.deactivate();
+        this._optionsListWindow.setCategory(this._optionsCatWindow.currentSymbol());
+        this._optionsListWindow.activate();
+        this._optionsListWindow.select(0); // SOLVES ISSUE 1 (Missing index on entry)
+    };
+
+    Scene_Map.prototype.onOptionsListCancel = function() {
+        this._optionsListWindow.deactivate();
+        this._optionsCatWindow.activate();
+        ConfigManager.save(); 
+    };
+
+    Scene_Map.prototype.onOptSysLoad = function() {
+        $gameTemp.returnToOmoriMenuAfterLoad = true;
+        SceneManager.push(Scene_Load); // Opens native continue screen without Save
+    };
+
+    Scene_Map.prototype.onOptSysConfirmOpen = function() {
+        $gameTemp.optionsConfirmType = this._optionsListWindow.commandSymbol(this._optionsListWindow.index());
+        this._optionsListWindow.deactivate();
+        $gameTemp._menuCursorDelay = CURSOR_ANIMATION_DELAY;
+        this._optionsConfirmWindow.show();
+        this._optionsConfirmWindow.activate();
+        this._optionsConfirmWindow.select(1); // Auto-defaults cursor to "No"
+        this._optionsConfirmWindow.refresh();
+    };
+
+    Scene_Map.prototype.onOptConfirmYes = function() {
+        if ($gameTemp.optionsConfirmType === 'sys_title') SceneManager.goto(Scene_Title);
+        else if ($gameTemp.optionsConfirmType === 'sys_exit') SceneManager.exit();
+    };
+
+    Scene_Map.prototype.onOptConfirmNo = function() {
+        this._optionsConfirmWindow.deactivate();
+        this._optionsConfirmWindow._closingDelay = CURSOR_ANIMATION_DELAY;
+        this._optionsListWindow.activate();
     };
 
     Scene_Map.prototype.createEquipSubWindows = function() {
@@ -1813,7 +2374,8 @@
         this._commandWindow.setHandler('pass', this.commandPass.bind(this));
         this._commandWindow.setHandler('equip', this.commandPersonal.bind(this));
         this._commandWindow.setHandler('mementos', this.commandMementos.bind(this));
-        this._commandWindow.setHandler('abilities', this.commandPersonal.bind(this)); // Routes to Status Window to pick Actor first!
+        this._commandWindow.setHandler('abilities', this.commandPersonal.bind(this));
+        this._commandWindow.setHandler('options', this.commandOptions.bind(this));
         this._commandWindow.setHandler('cancel', this.closeCustomOmoriMenu.bind(this));
         this.addWindow(this._commandWindow);
     };
@@ -1972,6 +2534,18 @@
         $gameTemp.abilDescInTimer = 0;
         $gameTemp.abilDescOutDelay = 0;
         $gameTemp.abilCatInTimer = 0;
+
+        // Reset Options Animation states
+        $gameTemp.optCatInTimer = 0;
+        $gameTemp.optListInTimer = 0;
+        $gameTemp.optDescInTimer = 0;
+        $gameTemp.optDescOutTimer = 0;
+        $gameTemp.optListOutTimer = 0;
+        $gameTemp.optCatOutTimer = 0;
+        $gameTemp.optCatIsAnimatingIn = false;
+        $gameTemp.optListIsAnimatingIn = false;
+        $gameTemp.optDescIsAnimatingIn = false;
+        $gameTemp.optionsAnimActive = false;
 
         $gameTemp.hudShowPass = false;
         $gameTemp.passAnimState = 0; 
@@ -2277,7 +2851,7 @@
             this._statusWindow.deactivate();
         } else if (symbol === 'abilities') {
             $gameTemp.activeMenuSymbol = 'abilities';
-            $gameTemp.equipSelectedActor = actorIndex; // Reuse for card sliding
+            $gameTemp.equipSelectedActor = actorIndex; 
             $gameTemp.equipAnimState = 1; 
             $gameTemp.equipAnimTimer = 0;
             this._statusWindow.deselect();
@@ -2316,6 +2890,10 @@
         $gameTemp.hudShowEquipTabs = !!(this._equipTabsWindow && (this._equipTabsWindow.visible || this._equipTabsWindow._closingDelay > 0));
         $gameTemp.hudShowEquipList = !!(this._equipListWindow && (this._equipListWindow.visible || this._equipListWindow._closingDelay > 0));
 
+        // Options Flags
+        $gameTemp.hudShowOptionsCat = !!(this._optionsCatWindow && (this._optionsCatWindow.visible || this._optionsCatWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0));
+        $gameTemp.hudShowOptionsList = !!(this._optionsListWindow && (this._optionsListWindow.visible || this._optionsListWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0));
+
         const leader = $gameParty.members()[0];
         $gameTemp.passMidImage = leader ? "img/pictures/" + leader.name().toLowerCase() + "_bg_black.png" : "img/pictures/sora_bg_black.png";
         for (let i = 0; i < 4; i++) {
@@ -2327,14 +2905,12 @@
             $gameTemp.passPhotoName = "img/pictures/pass_sora_to_gin.png";
         }
 
-        // 1. Track Currently Equipped Names for the Tabs
         if ($gameTemp.equipSelectedActor >= 0 && $gameParty.members()[$gameTemp.equipSelectedActor]) {
             const actor = $gameParty.members()[$gameTemp.equipSelectedActor];
             const equips = actor.equips();
             $gameTemp.equipCurrentWeaponName = equips[0] ? equips[0].name : "-------";
             $gameTemp.equipCurrentCharmName = equips[1] ? equips[1].name : "-------";
             
-            // Track 4 equipped Abilities for the Tabs
             actor._equippedSkills = actor._equippedSkills || [null, null, null, null];
             actor._equippedBonds = actor._equippedBonds || [null, null, null, null];
             const targetArr = $gameTemp.currentAbilityCategory === 'skills' ? actor._equippedSkills : actor._equippedBonds;
@@ -2348,7 +2924,6 @@
             for (let i = 0; i < 4; i++) $gameTemp['abilTabName' + i] = "";
         }
 
-        // 2. Track the 4 Visible Grid Items for the Equip List
         if (this._equipListWindow && this._equipListWindow._data) {
             let cursorRow = Math.floor(this._equipListWindow.index() / this._equipListWindow.maxCols());
             if (cursorRow < 0) cursorRow = 0;
@@ -2362,7 +2937,6 @@
             }
         }
         
-        // 2B. Track the 4 Visible Grid Items for the Abilities List
         if (this._abilitiesListWindow && this._abilitiesListWindow._data) {
             let cursorRow = Math.floor(this._abilitiesListWindow.index() / this._abilitiesListWindow.maxCols());
             if (cursorRow < 0) cursorRow = 0;
@@ -2371,18 +2945,87 @@
             for (let i = 0; i < 4; i++) {
                 const item = this._abilitiesListWindow._data[topIndex + i];
                 if (item === undefined) $gameTemp['abilListSlot' + i] = "";
-                else $gameTemp['abilListSlot' + i] = item.name; // No nulls in Abilities List
+                else $gameTemp['abilListSlot' + i] = item.name; 
             }
         }
 
-        // 3. Track the Hovered Item for Description Windows
+        // 2C. TRACK OPTIONS MENU FOR HMU
+        if (this._optionsCatWindow) {
+            $gameTemp.optionsCatIndex = this._optionsCatWindow.index();
+        }
+        
+        if (this._optionsListWindow && this._optionsListWindow._list) {
+            const maxOptions = 10; 
+            for (let i = 0; i < maxOptions; i++) {
+                const item = this._optionsListWindow._list[i];
+                if (item) {
+                    $gameTemp['optionName' + i] = item.name;
+                    $gameTemp['optionIsBind' + i] = (item.ext === 'bind');
+                    
+                    if (this._optionsListWindow._category === 'general') {
+                        let choices = [];
+                        let activeIdx = 0;
+                        if (item.symbol === 'opt_res') { choices = ["1x", "Fullscreen"]; activeIdx = ConfigManager.customResIndex !== undefined ? ConfigManager.customResIndex : 0; }
+                        if (item.symbol === 'opt_skip') { choices = ["OFF", "ON"]; activeIdx = ConfigManager.commandRemember ? 1 : 0; }
+                        if (item.symbol === 'opt_btl') { choices = ["Fast", "Medium", "Slow"]; activeIdx = ConfigManager.battleTextSpeed !== undefined ? ConfigManager.battleTextSpeed : 1; }
+                        if (item.symbol === 'opt_move') { choices = ["Walk", "Dash"]; activeIdx = ConfigManager.alwaysDash ? 1 : 0; }
+                        $gameTemp['optionChoice1_' + i] = choices[0] || "";
+                        $gameTemp['optionChoice2_' + i] = choices[1] || "";
+                        $gameTemp['optionChoice3_' + i] = choices[2] || "";
+                        $gameTemp['optionActiveIdx_' + i] = activeIdx;
+                    } else if (this._optionsListWindow._category === 'audio') {
+                        let vol = 0;
+                        if (item.symbol === 'opt_bgm') vol = ConfigManager.bgmVolume;
+                        if (item.symbol === 'opt_bgs') vol = ConfigManager.bgsVolume;
+                        if (item.symbol === 'opt_me') vol = ConfigManager.meVolume;
+                        if (item.symbol === 'opt_se') vol = ConfigManager.seVolume;
+                        $gameTemp['optionAudioVol_' + i] = vol + "%";
+                    } else if (this._optionsListWindow._category === 'controls' && item.ext === 'bind') {
+                        $gameTemp['optionKey_' + i] = "[Key]";
+                        $gameTemp['optionPad_' + i] = "(Pad)";
+                    }
+                } else {
+                    $gameTemp['optionName' + i] = "";
+                    $gameTemp['optionChoice1_' + i] = "";
+                    $gameTemp['optionChoice2_' + i] = "";
+                    $gameTemp['optionChoice3_' + i] = "";
+                    $gameTemp['optionAudioVol_' + i] = "";
+                    $gameTemp['optionKey_' + i] = "";
+                    $gameTemp['optionPad_' + i] = "";
+                    $gameTemp['optionActiveIdx_' + i] = 0;
+                    $gameTemp['optionIsBind' + i] = false;
+                }
+            }
+            $gameTemp.optionsCursorIndex = this._optionsListWindow.index();
+            $gameTemp.optionsCurrentCat = this._optionsListWindow._category;
+            $gameTemp.optionsBindMode = this._optionsListWindow._bindMode;
+            
+            if (this._optionsListWindow.active && this._optionsListWindow.index() >= 0) {
+                const symbol = this._optionsListWindow.commandSymbol(this._optionsListWindow.index());
+                let desc = "";
+                if (symbol && symbol.includes('res')) desc = "Change the game's display size.";
+                else if (symbol && symbol.includes('skip')) desc = "Toggle holding Confirm to fast-forward dialogue.";
+                else if (symbol && symbol.includes('btl')) desc = "Change the speed of battle messages.";
+                else if (symbol && symbol.includes('move')) desc = "Toggle Default Dash.";
+                else if (symbol && symbol.includes('bgm')) desc = "Adjust the background music volume.";
+                else if (symbol && symbol.includes('bgs')) desc = "Adjust the background sound volume.";
+                else if (symbol && symbol.includes('me')) desc = "Adjust the musical effect volume.";
+                else if (symbol && symbol.includes('se')) desc = "Adjust the sound effect volume.";
+                else if (symbol && symbol.includes('key')) desc = "Remap game controls.";
+                else if (symbol && symbol.includes('sys')) desc = "System commands.";
+                
+                $gameTemp.optionsHoverDesc = desc;
+            } else {
+                $gameTemp.optionsHoverDesc = "";
+            }
+        }
+
         let hoveredEquipItem = null;
         let isHoveringNothing = false;
         
         let hoveredAbilItem = null;
         let isAbilHoveringNothing = false;
 
-        // Equip Hover tracking
         if (this._equipListWindow && this._equipListWindow.active) {
             hoveredEquipItem = this._equipListWindow.item();
             if (hoveredEquipItem === null) isHoveringNothing = true; 
@@ -2398,7 +3041,6 @@
             }
         }
         
-        // Abilities Hover tracking
         if (this._abilitiesListWindow && this._abilitiesListWindow.active) {
             hoveredAbilItem = this._abilitiesListWindow.item();
         } else if (this._abilitiesTabsWindow && this._abilitiesTabsWindow.active && $gameTemp.equipSelectedActor >= 0) {
@@ -2409,7 +3051,6 @@
             else isAbilHoveringNothing = true;
         }
 
-        // 4. Output Equip Hover Info
         if (hoveredEquipItem) {
             $gameTemp.equipHoverName = hoveredEquipItem.name;
             if (hoveredEquipItem.description) {
@@ -2441,17 +3082,16 @@
             $gameTemp.equipHoverDesc2 = "";
         }
         
-        // 4B. Output Abilities Hover Info
         const formatAbilDesc = (text) => {
             if (!text) return ["", "", ""];
             let lines = text.split('\n');
             let result = [];
-            const maxLen = 45; // Maximum characters per line. Tweak this if it clips!
+            const maxLen = 45; 
 
             for (let line of lines) {
                 while (line.length > maxLen) {
                     let splitIdx = line.lastIndexOf(' ', maxLen);
-                    if (splitIdx === -1) splitIdx = maxLen; // Force split if no spaces exist
+                    if (splitIdx === -1) splitIdx = maxLen; 
                     result.push(line.substring(0, splitIdx).trim());
                     line = line.substring(splitIdx).trim();
                 }
@@ -2467,7 +3107,6 @@
             $gameTemp.abilHoverDesc2 = descLines[1];
             $gameTemp.abilHoverDesc3 = descLines[2];
             
-            // --- NEW: COST TRACKING (MP ONLY) ---
             const actor = $gameParty.members()[$gameTemp.equipSelectedActor];
             if (actor) {
                 $gameTemp.abilHoverMpCost = actor.skillMpCost(hoveredAbilItem);
@@ -2524,14 +3163,13 @@
             $gameTemp.mementosItemAmount = 0;
         }
 
-        // 5. Stat Comparison Math (Unchanged)
         if (this._equipTabsWindow || this._equipListWindow) {
             let statMode = 0; // 0 = Tabs (--), 1 = List Mode
             if (this._equipListWindow && this._equipListWindow.active && $gameTemp.equipSelectedActor >= 0) {
                 statMode = 1;
             }
 
-            for (let i = 0; i < 8; i++) { // RMMZ has 8 base params (0: MHP, 1: MMP, 2: ATK, 3: DEF, 4: MAT, 5: MDF, 6: AGI, 7: LUK)
+            for (let i = 0; i < 8; i++) { 
                 if ($gameTemp.equipSelectedActor < 0 || !$gameParty.members()[$gameTemp.equipSelectedActor]) {
                     $gameTemp['equipStatCurrent' + i] = "";
                     $gameTemp['equipStatState' + i] = -1;
@@ -2540,25 +3178,23 @@
                     const actor = $gameParty.members()[$gameTemp.equipSelectedActor];
                     const currentVal = actor.param(i);
                     
-                    // ALWAYS expose the current base stat so it shows up in both Tabs and List mode
                     $gameTemp['equipStatCurrent' + i] = currentVal; 
 
                     if (statMode === 0) {
-                        $gameTemp['equipStatState' + i] = -1; // -1 means Tabs Mode (---)
+                        $gameTemp['equipStatState' + i] = -1;
                         $gameTemp['equipStatValue' + i] = "---";
                     } else {
                         const slotId = this._equipListWindow._slotId;
                         const oldItem = actor.equips()[slotId];
                         const newItem = hoveredEquipItem;
                         
-                        // Calculate difference (0 if unequipping or replacing nothing)
                         const diff = (newItem ? newItem.params[i] : 0) - (oldItem ? oldItem.params[i] : 0);
                         const newVal = currentVal + diff;
 
                         $gameTemp['equipStatValue' + i] = newVal;
-                        if (diff > 0) $gameTemp['equipStatState' + i] = 2; // Higher (Green)
-                        else if (diff < 0) $gameTemp['equipStatState' + i] = 3; // Lower (Red)
-                        else $gameTemp['equipStatState' + i] = 1; // Same (White)
+                        if (diff > 0) $gameTemp['equipStatState' + i] = 2;
+                        else if (diff < 0) $gameTemp['equipStatState' + i] = 3;
+                        else $gameTemp['equipStatState' + i] = 1;
                     }
                 }
             }
