@@ -243,20 +243,18 @@
     };
 
     Game_Event.prototype.updateMonsterCustomMovement = function() {
+        const wasChasing = this._isChasingPlayer;
+        let isNowChasing = false;
+
         if (this._monsterMode === 'REG') {
             const allowedRegs = this.getAllowedRegions(); 
             const playerRegion = $gameMap.regionId($gamePlayer.x, $gamePlayer.y);
             
             // Player menginjak region kekuasaan monster?
             if (allowedRegs.includes(playerRegion)) {
-                this.moveTypeTowardPlayer(); // Ubah jadi agresif mengejar target!
+                isNowChasing = true;
             } else {
-                // Kehilangan target, maka jalan-jalan di teritorial regionnya
-                if (this._movementTypeEx === 'S' || this._movementTypeEx === 'M') {
-                    this.updateSmartRandomMovement();
-                } else {
-                    this.moveRandom();
-                }
+                isNowChasing = false;
             }
         } 
         else if (this._monsterMode === 'DIST') {
@@ -265,27 +263,62 @@
             // Hitung jarak (distance manhattan / taksi)
             const distance = sx + sy; // Total blok
             
-            if (!this._isChasingPlayer) {
+            if (!wasChasing) {
                 // Jika sedang tidak agresif, cek apakah player masuk ke radius Deteksi
                 if (distance <= this._monsterDist) {
-                    this._isChasingPlayer = true;
+                    isNowChasing = true;
                 }
             } else {
                 // Jika sedang agresif, cek apakah player sudah menjauh (Distance + 2 jarak kabur)
                 if (distance > this._monsterDist + 2) {
-                    this._isChasingPlayer = false; 
+                    isNowChasing = false; 
+                } else {
+                    isNowChasing = true;
                 }
             }
+        }
+
+        // Terapkan perubahan status
+        this._isChasingPlayer = isNowChasing;
+
+        // Logika munculnya Balon, kecepatan lari, dan Stun saat transisi:
+        if (this._isChasingPlayer && !wasChasing) {
+            // Baru saja menyadari keberadaan Player (Mulai mengejar)
+            $gameTemp.requestBalloon(this, 1); // Balon Exclamation (!)
             
-            if (this._isChasingPlayer) {
-                this.moveTypeTowardPlayer(); // Mengejar player muter halangan
+            // Simpan speed awal agar nanti kembalinya bener
+            if (this._originalMoveSpeed === undefined) {
+                this._originalMoveSpeed = this.moveSpeed();
+            }
+            this.setMoveSpeed(this._originalMoveSpeed + 1); // Tambah ngebut! (Bisa disesuaikan misal jd 4)
+
+            // Supaya gak langsung glith ngebut pas kaget, force tunggu balon bentar 
+            this._waitCount = 30; // Stun kaget bentar
+            return; // Skip pergerakan 1 frame ini
+
+        } else if (!this._isChasingPlayer && wasChasing) {
+            // Baru saja kehilangan Player (Berhenti mengejar / Player lepas)
+            $gameTemp.requestBalloon(this, 2); // Balon Question (?)
+            
+            if (this._originalMoveSpeed !== undefined) {
+                this.setMoveSpeed(this._originalMoveSpeed); // Balik ke speed asal letoy
             } else {
-                // Jika sudah ga ngejar, jalan muter-muter / patroli
-                if (this._movementTypeEx === 'S' || this._movementTypeEx === 'M') {
-                    this.updateSmartRandomMovement();
-                } else {
-                    this.moveRandom();
-                }
+                this.setMoveSpeed(3); 
+            }
+            
+            this._waitCount = 90; // Stun alias tengok-tengok bingung kehilangan mangsa
+            return; // Skip pergerakan frame
+        }
+
+        // Jalankan eksekusi jalannya:
+        if (this._isChasingPlayer) {
+            this.moveTypeTowardPlayer(); // Ubah jadi agresif mengejar target!
+        } else {
+            // Kehilangan target, maka jalan-jalan di teritorial regionnya
+            if (this._movementTypeEx === 'S' || this._movementTypeEx === 'M') {
+                this.updateSmartRandomMovement();
+            } else {
+                this.moveRandom();
             }
         }
     };
