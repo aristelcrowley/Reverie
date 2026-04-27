@@ -29,5 +29,6 @@ var $plugins =
 {"name":"EventRegionRestrict","status":true,"description":"Membatasi pergerakan Event hanya pada Region ID tertentu.","parameters":{}},
 {"name":"SmoothEventMovement","status":true,"description":"Membuat pergerakan autonomous event menjadi lebih natural/smooth menggunakan pathfinding.","parameters":{}},
 {"name":"AnimatedTextEffects","status":true,"description":"Reverie - Custom Animated Message Text Effects","parameters":{}},
+{"name":"Reverie_DebugChapterWarp","status":true,"description":"Debug warp antar map per chapter lewat F10 untuk RPG Maker MZ.","parameters":{"playtestOnly":"true","chapter0Name":"CH 0","chapter0Maps":"[\"{\\\"name\\\":\\\"HUB\\\",\\\"mapId\\\":\\\"33\\\",\\\"x\\\":\\\"0\\\",\\\"y\\\":\\\"0\\\",\\\"direction\\\":\\\"0\\\",\\\"fadeType\\\":\\\"0\\\"}\"]","chapter1Name":"CH 1","chapter1Maps":"[]","chapter2Name":"CH 2","chapter2Maps":"[]","chapter3Name":"CH 3","chapter3Maps":"[]","chapter4Name":"CH 4","chapter4Maps":"[]","chapter5Name":"CH 5","chapter5Maps":"[]"}},
 {"name":"ObjectMovementAnimation","status":true,"description":"Event Object Movement Animation (12-Frames Loop)","parameters":{}}
 ];
