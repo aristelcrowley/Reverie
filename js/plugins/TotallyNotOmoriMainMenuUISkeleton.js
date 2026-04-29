@@ -118,6 +118,52 @@
     const PASS_SLOT_DIST_X = 220; 
     const PASS_SLOT_DIST_Y = 220;
 
+    const passSlotX = (slot) => slot === 0 ? 0 : slot === 1 ? PASS_SLOT_DIST_X : slot === 2 ? 0 : -PASS_SLOT_DIST_X;
+    const passSlotY = (slot) => slot === 0 ? -PASS_SLOT_DIST_Y : slot === 1 ? 0 : slot === 2 ? PASS_SLOT_DIST_Y : 0;
+    const passOriginX = (slot) => slot === 0 ? 15 : slot === 1 ? -15 : slot === 2 ? -15 : 15;
+    const passOriginY = (slot) => slot === 0 ? 15 : slot === 1 ? 15 : slot === 2 ? -15 : -15;
+
+    const forceUltraHUDVisible = (scene) => {
+        const hud = scene && scene._ultraHudContainer;
+        if (!hud) return;
+
+        if (scene.updateUltraHUDContainerVisibility) {
+            scene.updateUltraHUDContainerVisibility();
+        }
+
+        const available = !scene.shouldHUDBeAvailable || scene.shouldHUDBeAvailable();
+        const active = (typeof $gameUltraHUD === 'undefined' || $gameUltraHUD.globalActiveness) && available;
+        if (scene.ultraHUDVisibility) {
+            hud.visible = scene.ultraHUDVisibility();
+        }
+        if (hud.setVisibilityState) {
+            hud.setVisibilityState(active);
+        }
+        if (active) {
+            hud._fadeState = true;
+            hud._fadeCurr = hud._fadeDuration || 0;
+            hud.alpha = 1;
+        }
+    };
+
+    const preparePassCardsAtOrigin = () => {
+        if (!$gameTemp) return;
+
+        $gameTemp.passCardX = $gameTemp.passCardX || [0, 0, 0, 0];
+        $gameTemp.passCardY = $gameTemp.passCardY || [0, 0, 0, 0];
+        $gameTemp.passCardOpacity = $gameTemp.passCardOpacity || [0, 0, 0, 0];
+
+        for (let i = 0; i < 4; i++) {
+            const actor = $gameParty.members()[i];
+            const currentSlot = (i - ($gameTemp.passSelectedIndex || 0) + 4) % 4;
+            $gameTemp['passCardVis' + i] = !!actor;
+            $gameTemp['passCardImage' + i] = actor ? "img/pictures/" + actor.name().toLowerCase() + "_bg_black.png" : "img/pictures/sora_bg_black.png";
+            $gameTemp.passCardX[i] = passOriginX(currentSlot);
+            $gameTemp.passCardY[i] = passOriginY(currentSlot);
+            $gameTemp.passCardOpacity[i] = 0;
+        }
+    };
+
     // =======================================================
     // 1.05. CONFIGURATION DEFAULTS & OVERRIDES
     // =======================================================
@@ -960,6 +1006,8 @@
                     $gameTemp.hudShowOptionsCat = false;
                     $gameTemp.hudShowOptionsList = false;
                     $gameTemp.hudShowOptionsDesc = false;
+                    $gameTemp.hudShowMainMenu = false;
+                    $gameTemp._directPassMode = false;
 
                     this._commandWindow.hide();
                     this._commandWindow.deactivate();
@@ -1012,8 +1060,7 @@
             this.menuCalling = false;
             this.openCustomOmoriMenu();
         } else if (this.isMenuEnabled() && Input.isTriggered('pageup') && (!$gameTemp || !$gameTemp._customMenuOpen)) {
-            $gameTemp._directPassMode = true;
-            this.openCustomOmoriMenu();
+            this.openCustomOmoriMenu(true);
             this._commandWindow.select(0);
             this.commandPass();
         }
@@ -1579,11 +1626,6 @@
 
     Scene_Map.prototype.updatePassAnimations = function() {
         if (!$gameTemp || !$gameTemp.hudShowPass || $gameTemp.passAnimState === 0) return;
-
-        const getSlotX = (slot) => slot === 0 ? 0 : slot === 1 ? PASS_SLOT_DIST_X : slot === 2 ? 0 : -PASS_SLOT_DIST_X;
-        const getSlotY = (slot) => slot === 0 ? -PASS_SLOT_DIST_Y : slot === 1 ? 0 : slot === 2 ? PASS_SLOT_DIST_Y : 0;
-        const getOrigX = (slot) => slot === 0 ? 15 : slot === 1 ? -15 : slot === 2 ? -15 : 15;
-        const getOrigY = (slot) => slot === 0 ? 15 : slot === 1 ? 15 : slot === 2 ? -15 : -15;
         
         $gameTemp.passAnimTimer++;
         const state = $gameTemp.passAnimState;
@@ -1607,8 +1649,8 @@
 
             for (let i = 0; i < 4; i++) {
                 const currentSlot = (i - $gameTemp.passSelectedIndex + 4) % 4;
-                const startX = getOrigX(currentSlot);
-                const startY = getOrigY(currentSlot);
+                const startX = passOriginX(currentSlot);
+                const startY = passOriginY(currentSlot);
                 
                 let arcX = 0;
                 let arcY = 0;
@@ -1618,8 +1660,8 @@
                 else if (currentSlot === 2) arcX = -arcPower;// Bottom card arcs Left
                 else if (currentSlot === 3) arcY = -arcPower;// Left card arcs Up
 
-                $gameTemp.passCardX[i] = startX + ((getSlotX(currentSlot) - startX) * prog) + arcX;
-                $gameTemp.passCardY[i] = startY + ((getSlotY(currentSlot) - startY) * prog) + arcY;
+                $gameTemp.passCardX[i] = startX + ((passSlotX(currentSlot) - startX) * prog) + arcX;
+                $gameTemp.passCardY[i] = startY + ((passSlotY(currentSlot) - startY) * prog) + arcY;
                 $gameTemp.passCardOpacity[i] = 255 * prog;
             }
             if ($gameTemp.passAnimTimer >= PASS_ANIM_IN_MAX) {
@@ -1630,8 +1672,8 @@
         else if (state === 3) { // 3. Idle
             for (let i = 0; i < 4; i++) {
                 const currentSlot = (i - $gameTemp.passSelectedIndex + 4) % 4;
-                $gameTemp.passCardX[i] = getSlotX(currentSlot);
-                $gameTemp.passCardY[i] = getSlotY(currentSlot);
+                $gameTemp.passCardX[i] = passSlotX(currentSlot);
+                $gameTemp.passCardY[i] = passSlotY(currentSlot);
                 $gameTemp.passCardOpacity[i] = 255;
             }
         }
@@ -1641,8 +1683,8 @@
             for (let i = 0; i < 4; i++) {
                 const prevSlot = (i - $gameTemp.passPrevIndex + 4) % 4;
                 const nextSlot = (i - $gameTemp.passSelectedIndex + 4) % 4;
-                const startX = getSlotX(prevSlot); const startY = getSlotY(prevSlot);
-                const endX = getSlotX(nextSlot);   const endY = getSlotY(nextSlot);
+                const startX = passSlotX(prevSlot); const startY = passSlotY(prevSlot);
+                const endX = passSlotX(nextSlot);   const endY = passSlotY(nextSlot);
                 $gameTemp.passCardX[i] = startX + ((endX - startX) * prog);
                 $gameTemp.passCardY[i] = startY + ((endY - startY) * prog);
             }
@@ -1660,8 +1702,8 @@
 
             for (let i = 0; i < 4; i++) {
                 const currentSlot = (i - $gameTemp.passSelectedIndex + 4) % 4;
-                const startX = getOrigX(currentSlot);
-                const startY = getOrigY(currentSlot);
+                const startX = passOriginX(currentSlot);
+                const startY = passOriginY(currentSlot);
                 
                 let arcX = 0;
                 let arcY = 0;
@@ -1670,8 +1712,8 @@
                 else if (currentSlot === 2) arcX = -arcPower;
                 else if (currentSlot === 3) arcY = -arcPower;
 
-                $gameTemp.passCardX[i] = getSlotX(currentSlot) + ((startX - getSlotX(currentSlot)) * prog) + arcX;
-                $gameTemp.passCardY[i] = getSlotY(currentSlot) + ((startY - getSlotY(currentSlot)) * prog) + arcY;
+                $gameTemp.passCardX[i] = passSlotX(currentSlot) + ((startX - passSlotX(currentSlot)) * prog) + arcX;
+                $gameTemp.passCardY[i] = passSlotY(currentSlot) + ((startY - passSlotY(currentSlot)) * prog) + arcY;
                 $gameTemp.passCardOpacity[i] = 255 * (1 - prog);
             }
             if ($gameTemp.passAnimTimer >= PASS_ANIM_IN_MAX) {
@@ -1686,7 +1728,6 @@
                 $gameTemp.hudShowPass = false;
                 this._passWindow.deactivate();
                 this.closeCustomOmoriMenu();
-                $gameTemp._directPassMode = false;
             } else {
                 const prog = 1 - Math.pow(1 - ($gameTemp.passAnimTimer / PASS_BG_ANIM_MAX), 3); 
                 $gameTemp.passBgOffsetTop = -150 * (1 - prog);
@@ -2438,8 +2479,15 @@
 
     Scene_Map.prototype.commandPass = function() {
         this._commandWindow.deactivate();
-        $gameTemp.hudShowPass = true;
-        
+        hijackPassNode(this);
+        hijackActorCardNode(this);
+        hijackMainMenuGroup(this);
+
+        $gameTemp.passSelectedIndex = 0;
+        $gameTemp.passPrevIndex = 0;
+        $gameTemp.passAnimTimer = 0;
+        preparePassCardsAtOrigin();
+
         if ($gameTemp._directPassMode) {
             $gameTemp.passAnimState = 2; 
             $gameTemp.passBgOffsetTop = -150;
@@ -2452,9 +2500,7 @@
             $gameTemp.passMidCardVis = false;
         }
         
-        $gameTemp.passAnimTimer = 0;
-        $gameTemp.passSelectedIndex = 0;
-        $gameTemp.passPrevIndex = 0;
+        $gameTemp.hudShowPass = true;
         this._passWindow.activate(); 
     };
 
@@ -2535,10 +2581,13 @@
     };
 
     // --- OVERLAY LOGIC HANDLERS ---
-    Scene_Map.prototype.openCustomOmoriMenu = function() {
+    Scene_Map.prototype.openCustomOmoriMenu = function(directPassMode = false) {
         $gameTemp._customMenuOpen = true;
+        $gameTemp._directPassMode = !!directPassMode;
+        $gameTemp.hudShowMainMenu = !directPassMode;
         $gameTemp._globalClosingDelay = 0;
         $gameTemp._menuCursorDelay = 0; 
+        forceUltraHUDVisible(this);
         
         $gameTemp.equipAnimState = 0;
         $gameTemp.equipAnimTimer = 0;
