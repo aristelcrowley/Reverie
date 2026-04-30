@@ -8,10 +8,10 @@
     // =======================================================
     // 1. SETTINGS & CONSTANTS
     // =======================================================
-    const DEBUG_MODE = true; 
+    const DEBUG_MODE = false; 
     
     const CURSOR_ANIMATION_DELAY = 20; 
-    const OPT_ANIM_DELAY = 10; 
+    const OPT_ANIM_DELAY = 20; 
     const GLOBAL_CURSOR_X_OFFSET = -6;
 
     const MENU_MARGIN_X = 12; 
@@ -51,6 +51,18 @@
     
     const OPTIONS_SUB_X_OFFSET = 24;
     const OPTIONS_LIST_CURSOR_Y_OFFSET = 0;
+
+    const OPTIONS_MAIN_CURSOR_X_OFFSET = 0; 
+    const OPTIONS_MAIN_CURSOR_Y_OFFSET = -10;
+    const OPTIONS_SUB_CURSOR_X_OFFSET = 0; 
+    const OPTIONS_SUB_CURSOR_Y_OFFSET = 0;
+    const OPTIONS_AUDIO_Y_OFFSET = 25;
+    const OPTIONS_SYSTEM_Y_OFFSET = 25;
+
+    const OPTIONS_GEN_SUB_START_X = 24; 
+    const OPTIONS_GEN_SUB_SPACING = 120;
+    const OPTIONS_CTRL_KEY_X = 300; 
+    const OPTIONS_CTRL_PAD_X = 525;
 
     const SLIDE_Y_OFFSET_CAT     = -68; 
     const SLIDE_Y_OFFSET_LIST    = -68; 
@@ -106,6 +118,56 @@
     const PASS_SLOT_DIST_X = 220; 
     const PASS_SLOT_DIST_Y = 220;
 
+    const passSlotX = (slot) => slot === 0 ? 0 : slot === 1 ? PASS_SLOT_DIST_X : slot === 2 ? 0 : -PASS_SLOT_DIST_X;
+    const passSlotY = (slot) => slot === 0 ? -PASS_SLOT_DIST_Y : slot === 1 ? 0 : slot === 2 ? PASS_SLOT_DIST_Y : 0;
+    const passOriginX = (slot) => slot === 0 ? 15 : slot === 1 ? -15 : slot === 2 ? -15 : 15;
+    const passOriginY = (slot) => slot === 0 ? 15 : slot === 1 ? 15 : slot === 2 ? -15 : -15;
+
+    const forceUltraHUDVisible = (scene) => {
+        const hud = scene && scene._ultraHudContainer;
+        if (!hud) return;
+
+        if (scene.updateUltraHUDContainerVisibility) {
+            scene.updateUltraHUDContainerVisibility();
+        }
+
+        const available = !scene.shouldHUDBeAvailable || scene.shouldHUDBeAvailable();
+        const active = (typeof $gameUltraHUD === 'undefined' || $gameUltraHUD.globalActiveness) && available;
+        if (scene.ultraHUDVisibility) {
+            hud.visible = scene.ultraHUDVisibility();
+        }
+        if (hud.setVisibilityState) {
+            hud.setVisibilityState(active);
+        }
+        if (active) {
+            hud._fadeState = true;
+            hud._fadeCurr = hud._fadeDuration || 0;
+            hud.alpha = 1;
+        }
+    };
+
+    const preparePassCardsAtOrigin = () => {
+        if (!$gameTemp) return;
+
+        $gameTemp.passCardX = $gameTemp.passCardX || [0, 0, 0, 0];
+        $gameTemp.passCardY = $gameTemp.passCardY || [0, 0, 0, 0];
+        $gameTemp.passCardOpacity = $gameTemp.passCardOpacity || [0, 0, 0, 0];
+
+        for (let i = 0; i < 4; i++) {
+            const actor = $gameParty.members()[i];
+            const currentSlot = (i - ($gameTemp.passSelectedIndex || 0) + 4) % 4;
+            $gameTemp['passCardVis' + i] = !!actor;
+            $gameTemp['passCardImage' + i] = actor ? "img/pictures/" + actor.name().toLowerCase() + "_bg_black.png" : "img/pictures/sora_bg_black.png";
+            $gameTemp.passCardX[i] = passOriginX(currentSlot);
+            $gameTemp.passCardY[i] = passOriginY(currentSlot);
+            $gameTemp.passCardOpacity[i] = 0;
+        }
+    };
+
+    // =======================================================
+    // 1.05. CONFIGURATION DEFAULTS & OVERRIDES
+    // =======================================================
+
     ConfigManager.customResIndex = ConfigManager.customResIndex !== undefined ? ConfigManager.customResIndex : 0;
     ConfigManager.battleTextSpeed = ConfigManager.battleTextSpeed !== undefined ? ConfigManager.battleTextSpeed : 1;
     
@@ -117,15 +179,13 @@
         }
     };
 
+    Input.gamepadMapper[1] = 'cancel';
+    Input.gamepadMapper[3] = 'pageup';
+
     const applyResolution = function() {
         if (ConfigManager.customResIndex === 1) Graphics._requestFullScreen();
         else Graphics._cancelFullScreen();
     };
-
-    const OPTIONS_GEN_SUB_START_X = 24; 
-    const OPTIONS_GEN_SUB_SPACING = 120;
-    const OPTIONS_CTRL_KEY_X = 200; 
-    const OPTIONS_CTRL_PAD_X = 320;
 
     // =======================================================
     // 1.1 COMBAT SKILL LOCK OVERRIDE (FORCE 4 SLOTS IN BATTLE)
@@ -528,7 +588,6 @@
     Scene_Map.prototype.update = function() {
         if ($gameTemp && $gameTemp.returnToOmoriMenuAfterLoad) {
             $gameTemp.returnToOmoriMenuAfterLoad = false;
-            // Completely reset all options visuals so it doesn't freeze the screen on return
             $gameTemp.hudShowOptionsCat = false;
             $gameTemp.hudShowOptionsList = false;
             $gameTemp.hudShowOptionsDesc = false;
@@ -541,8 +600,8 @@
             if (this._commandWindow) this._commandWindow.select(4); // Selects "Options" gracefully
         }
 
-        if ($gameTemp && ($gameTemp._customMenuOpen || $gameTemp._globalClosingDelay > 0)) {
-            Scene_Base.prototype.update.call(this); 
+        if ($gameTemp && ($gameTemp._customMenuOpen || $gameTemp._globalClosingDelay > 0)) { 
+            Scene_Base.prototype.update.call(this);
 
             this.updatePassAnimations();
             this.updateHUDMakerBridge(); 
@@ -571,38 +630,18 @@
                     this._optionsListWindow.setCategory('general');
                     this._optionsListWindow.deselect();
                     this._optionsListWindow.show();
-                    
-                    $gameTemp.optDescInTimer = OPT_ANIM_DELAY;
-                }
-            }
-            if ($gameTemp.optDescInTimer > 0) {
-                $gameTemp.optDescInTimer--;
-                if ($gameTemp.optDescInTimer === 0) {
-                    $gameTemp.optListIsAnimatingIn = false;
-                    $gameTemp.hudShowOptionsDesc = true;
-                    $gameTemp.optDescIsAnimatingIn = true;
-                    
-                    $gameTemp._menuCursorDelay = OPT_ANIM_DELAY;
                 }
             }
 
-            // Options Completion Unfreeze
-            if ($gameTemp.optDescIsAnimatingIn && $gameTemp._menuCursorDelay === 0) {
-                $gameTemp.optDescIsAnimatingIn = false;
+            // Options Completion Unfreeze (Now waits for List instead of Desc)
+            if ($gameTemp.optListIsAnimatingIn && $gameTemp._menuCursorDelay === 0) {
+                $gameTemp.optListIsAnimatingIn = false;
                 $gameTemp.optionsAnimActive = true;
                 this._optionsCatWindow.activate();
                 this._optionsCatWindow.select(0);
             }
 
             // OPTIONS CASCADE OUT
-            if ($gameTemp.optDescOutTimer > 0) {
-                $gameTemp.optDescOutTimer--;
-                if ($gameTemp.optDescOutTimer === 0) {
-                    $gameTemp.hudShowOptionsDesc = false;
-                    this._optionsListWindow._closingDelay = OPT_ANIM_DELAY;
-                    $gameTemp.optListOutTimer = OPT_ANIM_DELAY;
-                }
-            }
             if ($gameTemp.optListOutTimer > 0) {
                 $gameTemp.optListOutTimer--;
                 if ($gameTemp.optListOutTimer === 0) {
@@ -868,9 +907,9 @@
                 {win: this._abilitiesListWindow, offsetX: SLIDE_X_OFFSET_EQUIP_LIST, offsetY: 0},
                 {win: this._equipTabsWindow, offsetX: 0, offsetY: SLIDE_Y_OFFSET_EQUIP_TABS},
                 {win: this._equipListWindow, offsetX: SLIDE_X_OFFSET_EQUIP_LIST, offsetY: 0},
-                {win: this._optionsCatWindow, offsetX: 0, offsetY: SLIDE_Y_OFFSET_CAT},
-                {win: this._optionsListWindow, offsetX: 0, offsetY: SLIDE_Y_OFFSET_OPT_LIST},
-                {win: this._optionsConfirmWindow, offsetX: 0, offsetY: SLIDE_Y_OFFSET_CONFIRM}
+                {win: this._optionsCatWindow, offsetX: 0, offsetY: 0},
+                {win: this._optionsListWindow, offsetX: 0, offsetY: 0},
+                {win: this._optionsConfirmWindow, offsetX: 0, offsetY: 0}
             ];
 
             // IN Animation math
@@ -967,11 +1006,17 @@
                     $gameTemp.hudShowOptionsCat = false;
                     $gameTemp.hudShowOptionsList = false;
                     $gameTemp.hudShowOptionsDesc = false;
+                    $gameTemp.hudShowMainMenu = false;
+                    $gameTemp._directPassMode = false;
 
                     this._commandWindow.hide();
                     this._commandWindow.deactivate();
                     this._statusWindow.hide();
                     this._statusWindow.deactivate();
+                    if (this._passWindow) {
+                        this._passWindow.hide();
+                        this._passWindow.deactivate(); 
+                    }
                     allWindows.forEach(item => {
                         if (item.win) {
                             item.win.hide();
@@ -1011,9 +1056,13 @@
     };
 
     Scene_Map.prototype.updateCallMenu = function() {
-        if (this.isMenuEnabled() && this.isMenuCalled()) {
+        if (this.isMenuEnabled() && (this.isMenuCalled() || Input.isTriggered('cancel') || Input.isTriggered('menu'))) {
             this.menuCalling = false;
             this.openCustomOmoriMenu();
+        } else if (this.isMenuEnabled() && Input.isTriggered('pageup') && (!$gameTemp || !$gameTemp._customMenuOpen)) {
+            this.openCustomOmoriMenu(true);
+            this._commandWindow.select(0);
+            this.commandPass();
         }
     };
 
@@ -1270,18 +1319,21 @@
     
     Window_MenuOptionsList.prototype.setCategory = function(category) {
         this._category = category;
-        this._bindMode = 0; // 0 = List, 1 = Edit Keyboard, 2 = Edit Gamepad
+        this._bindMode = (category === 'controls') ? 1 : 0;
         this.refresh();
     };
 
     Window_MenuOptionsList.prototype.itemHeight = function() {
         if (this._category === 'general') return 88; 
+        if (this._category === 'controls') return 37;
         return Window_Selectable.prototype.itemHeight.call(this);
     };
 
     Window_MenuOptionsList.prototype.itemRect = function(index) {
         const rect = Window_Command.prototype.itemRect.call(this, index);
-        if (this._category === 'controls') rect.y += 40; 
+        if (this._category === 'controls') rect.y += 70; 
+        if (this._category === 'audio') rect.y += OPTIONS_AUDIO_Y_OFFSET;
+        if (this._category === 'system') rect.y += OPTIONS_SYSTEM_Y_OFFSET;
         return rect;
     };
 
@@ -1291,7 +1343,6 @@
     };
 
     Window_MenuOptionsList.prototype.isCommandEnabled = function(index) {
-        if (this._category === 'controls' && index === 0) return false; 
         return true;
     };
 
@@ -1311,7 +1362,6 @@
                 this.addCommand("SE Volume", 'opt_se');
                 break;
             case 'controls':
-                this.addCommand("", 'opt_dummy', false); 
                 this.addCommand("Up", 'key_up', true, 'bind');
                 this.addCommand("Down", 'key_down', true, 'bind');
                 this.addCommand("Left", 'key_left', true, 'bind');
@@ -1319,7 +1369,8 @@
                 this.addCommand("Confirm", 'key_ok', true, 'bind');
                 this.addCommand("Cancel / Menu", 'key_cancel', true, 'bind');
                 this.addCommand("Run", 'key_shift', true, 'bind');
-                this.addCommand("Reset Defaults", 'key_reset', true, 'reset');
+                this.addCommand("Pass", 'key_pass', true, 'bind');
+                this.addCommand("", 'key_reset', true, 'reset');
                 break;
             case 'system':
                 this.addCommand("Load Game", 'sys_load', true); 
@@ -1336,6 +1387,12 @@
         const symbol = this.commandSymbol(index);
         const name = this.commandName(index);
         const ext = this.currentExt ? this._list[index].ext : null;
+
+        const clearX = rect.x - CURSOR_DRAW_SIZE - 20;
+        const clearY = rect.y - 4; 
+        const clearW = rect.width + CURSOR_DRAW_SIZE + 400; 
+        const clearH = this.itemHeight() + 8;
+        this.contents.clearRect(clearX, clearY, clearW, clearH);
 
         this.changePaintOpacity(this.isCommandEnabled(index));
         let textX = rect.x + CURSOR_DRAW_SIZE + 10; 
@@ -1354,23 +1411,13 @@
                 this.drawText(name, textX, rect.y, 250, 'left'); 
                 let curX = textX + OPTIONS_GEN_SUB_START_X; 
                 
-                // Shrink the font size specifically for the subchoices
                 const originalFontSize = this.contents.fontSize;
                 this.contents.fontSize = originalFontSize - 0; 
                 
                 for (let i = 0; i < subChoices.length; i++) {
                     this.changeTextColor(i === subIndex ? "#ffffff" : "#888888");
                     const cW = this.textWidth(subChoices[i]) + 20;
-                    this.drawText(subChoices[i], curX, rect.y + 34, cW, 'left'); // Draws cleanly below the parent
-                    
-                    // SECOND CURSOR (Only renders when parent is hovered)
-                    if (this.index() === index && this.active && i === subIndex) {
-                        const c2X = curX - CURSOR_DRAW_SIZE + GLOBAL_CURSOR_X_OFFSET + 4;
-                        const cursorBmp = ImageManager.loadSystem(CURSOR_IMAGE_NAME);
-                        if (cursorBmp.isReady()) {
-                            this.contents.blt(cursorBmp, 0, 0, CURSOR_NATIVE_SIZE, CURSOR_NATIVE_SIZE, c2X, rect.y + 34 + (24 - CURSOR_DRAW_SIZE) / 2, CURSOR_DRAW_SIZE, CURSOR_DRAW_SIZE);
-                        }
-                    }
+                    this.drawText(subChoices[i], curX, rect.y + 34, cW, 'left'); 
                     curX += OPTIONS_GEN_SUB_SPACING;
                 }
                 this.contents.fontSize = originalFontSize;
@@ -1382,13 +1429,35 @@
                 if (symbol === 'opt_bgs') vol = ConfigManager.bgsVolume;
                 if (symbol === 'opt_me') vol = ConfigManager.meVolume;
                 if (symbol === 'opt_se') vol = ConfigManager.seVolume;
-                this.drawText(vol + "%", rect.x + rect.width - 60, rect.y, 60, 'right'); // Pushed to dead end right
-            } else if (this._category === 'controls' && symbol !== 'key_reset' && symbol !== 'opt_dummy') {
-                this.drawText(name, textX, rect.y, 250, 'left');
-                this.drawText("[Key]", textX + OPTIONS_CTRL_KEY_X, rect.y, 100, 'left');
-                this.drawText("(Pad)", textX + OPTIONS_CTRL_PAD_X, rect.y, 100, 'left');
+                this.drawText(vol + "%", rect.x + rect.width - 60, rect.y, 60, 'right'); 
+            } else if (this._category === 'controls') {
+                if (symbol === 'key_reset') {
+                    this.drawText("Reset Keys", textX + OPTIONS_CTRL_KEY_X, rect.y, 150, 'left');
+                    this.drawText("Reset Pad", textX + OPTIONS_CTRL_PAD_X, rect.y, 150, 'left');
+                } else {
+                    this.drawText(name, textX, rect.y, 250, 'left');
+                    this.drawText("[Key]", textX + OPTIONS_CTRL_KEY_X, rect.y, 100, 'left');
+                    this.drawText("(Pad)", textX + OPTIONS_CTRL_PAD_X, rect.y, 100, 'left');
+                }
             } else {
                 this.drawText(name, textX, rect.y, 250, 'left');
+            }
+        }
+
+        if (this._category === 'general') {
+            let curX = textX + OPTIONS_GEN_SUB_START_X; 
+            for (let i = 0; i < subChoices.length; i++) {
+                if (i === subIndex) { 
+                    const c2X = curX - CURSOR_DRAW_SIZE + GLOBAL_CURSOR_X_OFFSET + 4 + OPTIONS_SUB_CURSOR_X_OFFSET;
+                    const cursorBmp = ImageManager.loadSystem(CURSOR_IMAGE_NAME);
+                    if (cursorBmp.isReady()) {
+                        const c2Y = rect.y + 34 + (24 - CURSOR_DRAW_SIZE) / 2 + OPTIONS_SUB_CURSOR_Y_OFFSET;
+                        this.contents.blt(cursorBmp, 0, 0, CURSOR_NATIVE_SIZE, CURSOR_NATIVE_SIZE, c2X, c2Y, CURSOR_DRAW_SIZE, CURSOR_DRAW_SIZE);
+                    } else {
+                        cursorBmp.addLoadListener(() => this.redrawItem(index));
+                    }
+                }
+                curX += OPTIONS_GEN_SUB_SPACING;
             }
         }
 
@@ -1396,17 +1465,18 @@
         if (this.index() === index && this.active) {
             const cursorBmp = ImageManager.loadSystem(CURSOR_IMAGE_NAME);
             let cursorY = rect.y + (rect.height - CURSOR_DRAW_SIZE) / 2 + OPTIONS_LIST_CURSOR_Y_OFFSET; 
-            if (this._category === 'general') cursorY = rect.y + (34 - CURSOR_DRAW_SIZE) / 2; // Points to top half title
+            if (this._category === 'general') cursorY = rect.y + (34 - CURSOR_DRAW_SIZE) / 2; 
+            
+            cursorY += OPTIONS_MAIN_CURSOR_Y_OFFSET;
 
             if (cursorBmp.isReady()) {
-                if (this._category !== 'controls' || this._bindMode === 0) {
-                    const cursorX1 = textX - CURSOR_DRAW_SIZE - 5 + GLOBAL_CURSOR_X_OFFSET; 
+                if (this._category !== 'controls') {
+                    const cursorX1 = textX - CURSOR_DRAW_SIZE - 5 + GLOBAL_CURSOR_X_OFFSET + OPTIONS_MAIN_CURSOR_X_OFFSET; 
                     this.contents.blt(cursorBmp, 0, 0, CURSOR_NATIVE_SIZE, CURSOR_NATIVE_SIZE, cursorX1, cursorY, CURSOR_DRAW_SIZE, CURSOR_DRAW_SIZE);
                 }
                 
-                // Controls Edit Cursor
-                if (this._category === 'controls' && this._bindMode > 0 && symbol !== 'key_reset') {
-                    const cursorX3 = (this._bindMode === 1 ? textX + OPTIONS_CTRL_KEY_X : textX + OPTIONS_CTRL_PAD_X) - CURSOR_DRAW_SIZE - 5 + GLOBAL_CURSOR_X_OFFSET;
+                if (this._category === 'controls' && this._bindMode > 0) {
+                    const cursorX3 = (this._bindMode === 1 ? textX + OPTIONS_CTRL_KEY_X : textX + OPTIONS_CTRL_PAD_X) - CURSOR_DRAW_SIZE - 5 + GLOBAL_CURSOR_X_OFFSET + OPTIONS_MAIN_CURSOR_X_OFFSET;
                     this.contents.blt(cursorBmp, 0, 0, CURSOR_NATIVE_SIZE, CURSOR_NATIVE_SIZE, cursorX3, cursorY, CURSOR_DRAW_SIZE, CURSOR_DRAW_SIZE);
                 }
 
@@ -1422,12 +1492,9 @@
         if (this.isCursorMovable()) {
             const lastIndex = this.index();
             
-            // Block UP/DOWN if in bind mode
-            if (this._bindMode === 0) {
-                if (Input.isRepeated("down")) { this.cursorDown(Input.isTriggered("down")); }
-                if (Input.isRepeated("up")) { this.cursorUp(Input.isTriggered("up")); }
-                if (this.index() !== lastIndex) { SoundManager.playCursor(); }
-            }
+            if (Input.isRepeated("down")) { this.cursorDown(Input.isTriggered("down")); }
+            if (Input.isRepeated("up")) { this.cursorUp(Input.isTriggered("up")); }
+            if (this.index() !== lastIndex) { SoundManager.playCursor(); }
             
             if (Input.isRepeated("right")) this.cursorRight(Input.isTriggered("right"));
             if (Input.isRepeated("left")) this.cursorLeft(Input.isTriggered("left"));
@@ -1439,7 +1506,7 @@
         const symbol = this.commandSymbol(this.index());
         
         if (this._category === 'general') {
-            if (!trigger) return; // Prevent holding for General
+            if (!trigger) return; 
             if (symbol === 'opt_res') { ConfigManager.customResIndex = Math.min(1, (ConfigManager.customResIndex !== undefined ? ConfigManager.customResIndex : 0) + 1); setTimeout(applyResolution, 500); }
             if (symbol === 'opt_skip') ConfigManager.commandRemember = true;
             if (symbol === 'opt_btl') ConfigManager.battleTextSpeed = Math.min(2, (ConfigManager.battleTextSpeed !== undefined ? ConfigManager.battleTextSpeed : 1) + 1);
@@ -1448,7 +1515,7 @@
             this.redrawItem(this.index());
         } 
         else if (this._category === 'audio') {
-            let amt = trigger ? 1 : 5; // Tap = 1, Hold = 5
+            let amt = trigger ? 1 : 5; 
             if (symbol === 'opt_bgm') { ConfigManager.bgmVolume = Math.min(100, ConfigManager.bgmVolume + amt); AudioManager.playBgm({name: "", volume: ConfigManager.bgmVolume}); }
             if (symbol === 'opt_bgs') ConfigManager.bgsVolume = Math.min(100, ConfigManager.bgsVolume + amt);
             if (symbol === 'opt_me') ConfigManager.meVolume = Math.min(100, ConfigManager.meVolume + amt);
@@ -1456,9 +1523,9 @@
             SoundManager.playCursor();
             this.redrawItem(this.index());
         }
-        else if (this._category === 'controls' && this._bindMode > 0) {
+        else if (this._category === 'controls') { 
             if (!trigger) return;
-            this._bindMode = 2; // Jump to Gamepad
+            this._bindMode = 2;
             SoundManager.playCursor();
             this.redrawItem(this.index());
         }
@@ -1486,9 +1553,9 @@
             SoundManager.playCursor();
             this.redrawItem(this.index());
         }
-        else if (this._category === 'controls' && this._bindMode > 0) {
+        else if (this._category === 'controls') {
             if (!trigger) return;
-            this._bindMode = 1; // Jump to Keyboard
+            this._bindMode = 1;
             SoundManager.playCursor();
             this.redrawItem(this.index());
         }
@@ -1500,28 +1567,12 @@
             if (symbol === 'sys_load') { SoundManager.playOk(); this.callHandler('sys_load'); } 
             else if (symbol === 'sys_title' || symbol === 'sys_exit') { SoundManager.playOk(); this.callHandler('sys_confirm'); }
         } else if (this._category === 'controls') {
-            if (symbol === 'key_reset') {
-                SoundManager.playOk(); // Trigger reset
-            } else {
-                if (this._bindMode === 0) {
-                    this._bindMode = 1; // Enter edit mode
-                    SoundManager.playOk();
-                    this.redrawItem(this.index());
-                } else {
-                    SoundManager.playOk(); // Trigger future rebind logic
-                }
-            }
+            SoundManager.playOk();
         }
     };
 
     Window_MenuOptionsList.prototype.processCancel = function() {
-        if (this._category === 'controls' && this._bindMode > 0) {
-            this._bindMode = 0; // Exit edit mode
-            SoundManager.playCancel();
-            this.redrawItem(this.index());
-        } else {
-            Window_Command.prototype.processCancel.call(this);
-        }
+        Window_Command.prototype.processCancel.call(this);
     };
 
     // PASS MENU CONTROLLER
@@ -1575,11 +1626,6 @@
 
     Scene_Map.prototype.updatePassAnimations = function() {
         if (!$gameTemp || !$gameTemp.hudShowPass || $gameTemp.passAnimState === 0) return;
-
-        const getSlotX = (slot) => slot === 0 ? 0 : slot === 1 ? PASS_SLOT_DIST_X : slot === 2 ? 0 : -PASS_SLOT_DIST_X;
-        const getSlotY = (slot) => slot === 0 ? -PASS_SLOT_DIST_Y : slot === 1 ? 0 : slot === 2 ? PASS_SLOT_DIST_Y : 0;
-        const getOrigX = (slot) => slot === 0 ? 15 : slot === 1 ? -15 : slot === 2 ? -15 : 15;
-        const getOrigY = (slot) => slot === 0 ? 15 : slot === 1 ? 15 : slot === 2 ? -15 : -15;
         
         $gameTemp.passAnimTimer++;
         const state = $gameTemp.passAnimState;
@@ -1603,8 +1649,8 @@
 
             for (let i = 0; i < 4; i++) {
                 const currentSlot = (i - $gameTemp.passSelectedIndex + 4) % 4;
-                const startX = getOrigX(currentSlot);
-                const startY = getOrigY(currentSlot);
+                const startX = passOriginX(currentSlot);
+                const startY = passOriginY(currentSlot);
                 
                 let arcX = 0;
                 let arcY = 0;
@@ -1614,8 +1660,8 @@
                 else if (currentSlot === 2) arcX = -arcPower;// Bottom card arcs Left
                 else if (currentSlot === 3) arcY = -arcPower;// Left card arcs Up
 
-                $gameTemp.passCardX[i] = startX + ((getSlotX(currentSlot) - startX) * prog) + arcX;
-                $gameTemp.passCardY[i] = startY + ((getSlotY(currentSlot) - startY) * prog) + arcY;
+                $gameTemp.passCardX[i] = startX + ((passSlotX(currentSlot) - startX) * prog) + arcX;
+                $gameTemp.passCardY[i] = startY + ((passSlotY(currentSlot) - startY) * prog) + arcY;
                 $gameTemp.passCardOpacity[i] = 255 * prog;
             }
             if ($gameTemp.passAnimTimer >= PASS_ANIM_IN_MAX) {
@@ -1626,8 +1672,8 @@
         else if (state === 3) { // 3. Idle
             for (let i = 0; i < 4; i++) {
                 const currentSlot = (i - $gameTemp.passSelectedIndex + 4) % 4;
-                $gameTemp.passCardX[i] = getSlotX(currentSlot);
-                $gameTemp.passCardY[i] = getSlotY(currentSlot);
+                $gameTemp.passCardX[i] = passSlotX(currentSlot);
+                $gameTemp.passCardY[i] = passSlotY(currentSlot);
                 $gameTemp.passCardOpacity[i] = 255;
             }
         }
@@ -1637,8 +1683,8 @@
             for (let i = 0; i < 4; i++) {
                 const prevSlot = (i - $gameTemp.passPrevIndex + 4) % 4;
                 const nextSlot = (i - $gameTemp.passSelectedIndex + 4) % 4;
-                const startX = getSlotX(prevSlot); const startY = getSlotY(prevSlot);
-                const endX = getSlotX(nextSlot);   const endY = getSlotY(nextSlot);
+                const startX = passSlotX(prevSlot); const startY = passSlotY(prevSlot);
+                const endX = passSlotX(nextSlot);   const endY = passSlotY(nextSlot);
                 $gameTemp.passCardX[i] = startX + ((endX - startX) * prog);
                 $gameTemp.passCardY[i] = startY + ((endY - startY) * prog);
             }
@@ -1656,8 +1702,8 @@
 
             for (let i = 0; i < 4; i++) {
                 const currentSlot = (i - $gameTemp.passSelectedIndex + 4) % 4;
-                const startX = getOrigX(currentSlot);
-                const startY = getOrigY(currentSlot);
+                const startX = passOriginX(currentSlot);
+                const startY = passOriginY(currentSlot);
                 
                 let arcX = 0;
                 let arcY = 0;
@@ -1666,8 +1712,8 @@
                 else if (currentSlot === 2) arcX = -arcPower;
                 else if (currentSlot === 3) arcY = -arcPower;
 
-                $gameTemp.passCardX[i] = getSlotX(currentSlot) + ((startX - getSlotX(currentSlot)) * prog) + arcX;
-                $gameTemp.passCardY[i] = getSlotY(currentSlot) + ((startY - getSlotY(currentSlot)) * prog) + arcY;
+                $gameTemp.passCardX[i] = passSlotX(currentSlot) + ((startX - passSlotX(currentSlot)) * prog) + arcX;
+                $gameTemp.passCardY[i] = passSlotY(currentSlot) + ((startY - passSlotY(currentSlot)) * prog) + arcY;
                 $gameTemp.passCardOpacity[i] = 255 * (1 - prog);
             }
             if ($gameTemp.passAnimTimer >= PASS_ANIM_IN_MAX) {
@@ -1677,17 +1723,24 @@
             }
         }
         else if (state === 6) { // 6. BG IN (Cancel Finish)
-            const prog = 1 - Math.pow(1 - ($gameTemp.passAnimTimer / PASS_BG_ANIM_MAX), 3); 
-            $gameTemp.passBgOffsetTop = -150 * (1 - prog);
-            $gameTemp.passBgOffsetBottom = 350 * (1 - prog);
-            if ($gameTemp.passAnimTimer >= PASS_BG_ANIM_MAX) {
+            if ($gameTemp._directPassMode) {
                 $gameTemp.passAnimState = 0;
                 $gameTemp.hudShowPass = false;
-            
-                $gameTemp.passBgOffsetTop = 0;
-                $gameTemp.passBgOffsetBottom = 0;
+                this._passWindow.deactivate();
+                this.closeCustomOmoriMenu();
+            } else {
+                const prog = 1 - Math.pow(1 - ($gameTemp.passAnimTimer / PASS_BG_ANIM_MAX), 3); 
+                $gameTemp.passBgOffsetTop = -150 * (1 - prog);
+                $gameTemp.passBgOffsetBottom = 350 * (1 - prog);
+                if ($gameTemp.passAnimTimer >= PASS_BG_ANIM_MAX) {
+                    $gameTemp.passAnimState = 0;
+                    $gameTemp.hudShowPass = false;
                 
-                this._commandWindow.activate(); 
+                    $gameTemp.passBgOffsetTop = 0;
+                    $gameTemp.passBgOffsetBottom = 0;
+                    
+                    this._commandWindow.activate(); 
+                }
             }
         }
         else if (state === 7) { // 7. Enter Confirm Fade
@@ -2256,7 +2309,8 @@
     Scene_Map.prototype.onOptionsCancel = function() {
         this._optionsCatWindow.deactivate();
         this._optionsCatWindow.deselect();
-        $gameTemp.optDescOutTimer = OPT_ANIM_DELAY;
+        this._optionsListWindow._closingDelay = OPT_ANIM_DELAY; 
+        $gameTemp.optListOutTimer = OPT_ANIM_DELAY;
         ConfigManager.save(); 
     };
 
@@ -2425,14 +2479,28 @@
 
     Scene_Map.prototype.commandPass = function() {
         this._commandWindow.deactivate();
-        $gameTemp.hudShowPass = true;
-        $gameTemp.passAnimState = 1; // BG OUT
-        $gameTemp.passAnimTimer = 0;
+        hijackPassNode(this);
+        hijackActorCardNode(this);
+        hijackMainMenuGroup(this);
+
         $gameTemp.passSelectedIndex = 0;
         $gameTemp.passPrevIndex = 0;
-        $gameTemp.passMidCardVis = false;
-        $gameTemp.passBgOffsetTop = 0;
-        $gameTemp.passBgOffsetBottom = 0;
+        $gameTemp.passAnimTimer = 0;
+        preparePassCardsAtOrigin();
+
+        if ($gameTemp._directPassMode) {
+            $gameTemp.passAnimState = 2; 
+            $gameTemp.passBgOffsetTop = -150;
+            $gameTemp.passBgOffsetBottom = 350;
+            $gameTemp.passMidCardVis = true;
+        } else {
+            $gameTemp.passAnimState = 1; 
+            $gameTemp.passBgOffsetTop = 0;
+            $gameTemp.passBgOffsetBottom = 0;
+            $gameTemp.passMidCardVis = false;
+        }
+        
+        $gameTemp.hudShowPass = true;
         this._passWindow.activate(); 
     };
 
@@ -2513,10 +2581,13 @@
     };
 
     // --- OVERLAY LOGIC HANDLERS ---
-    Scene_Map.prototype.openCustomOmoriMenu = function() {
+    Scene_Map.prototype.openCustomOmoriMenu = function(directPassMode = false) {
         $gameTemp._customMenuOpen = true;
+        $gameTemp._directPassMode = !!directPassMode;
+        $gameTemp.hudShowMainMenu = !directPassMode;
         $gameTemp._globalClosingDelay = 0;
         $gameTemp._menuCursorDelay = 0; 
+        forceUltraHUDVisible(this);
         
         $gameTemp.equipAnimState = 0;
         $gameTemp.equipAnimTimer = 0;
@@ -2875,24 +2946,25 @@
         $gameTemp.isSelectingActor = this._statusWindow ? this._statusWindow.active : false;
         $gameTemp.menuActorIndex = this._statusWindow ? this._statusWindow.index() : -1;
 
-        $gameTemp.hudShowMementos = !!(this._mementosCatWindow && (this._mementosCatWindow.visible || this._mementosCatWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0));
-        $gameTemp.hudShowMementosList = !!(this._mementosItemWindow && (this._mementosItemWindow.visible || this._mementosItemWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0));
+        $gameTemp.hudShowMainMenu = $gameTemp._customMenuOpen && !$gameTemp.hudShowOptionsCat && !$gameTemp.hudShowOptionsList && !$gameTemp._directPassMode;
+
+        $gameTemp.hudShowMementos = !!(this._mementosCatWindow && (this._mementosCatWindow.visible || this._mementosCatWindow._closingDelay > 0));
+        $gameTemp.hudShowMementosList = !!(this._mementosItemWindow && (this._mementosItemWindow.visible || this._mementosItemWindow._closingDelay > 0));
         
-        const showAction = !!(this._mementosActionWindow && (this._mementosActionWindow.visible || this._mementosActionWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0));
+        const showAction = !!(this._mementosActionWindow && (this._mementosActionWindow.visible || this._mementosActionWindow._closingDelay > 0));
         $gameTemp.hudShowMementosAction = showAction && !$gameTemp.mementosUseMode;
         
-        $gameTemp.hudShowMementosConfirm = !!(this._mementosConfirmWindow && (this._mementosConfirmWindow.visible || this._mementosConfirmWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0));
+        $gameTemp.hudShowMementosConfirm = !!(this._mementosConfirmWindow && (this._mementosConfirmWindow.visible || this._mementosConfirmWindow._closingDelay > 0));
 
-        $gameTemp.hudShowAbilitiesCat = !!(this._abilitiesCatWindow && (this._abilitiesCatWindow.visible || this._abilitiesCatWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0));
-        $gameTemp.hudShowAbilitiesTabs = !!(this._abilitiesTabsWindow && (this._abilitiesTabsWindow.visible || this._abilitiesTabsWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0));
-        $gameTemp.hudShowAbilitiesList = !!(this._abilitiesListWindow && (this._abilitiesListWindow.visible || this._abilitiesListWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0));
+        $gameTemp.hudShowAbilitiesCat = !!(this._abilitiesCatWindow && (this._abilitiesCatWindow.visible || this._abilitiesCatWindow._closingDelay > 0));
+        $gameTemp.hudShowAbilitiesTabs = !!(this._abilitiesTabsWindow && (this._abilitiesTabsWindow.visible || this._abilitiesTabsWindow._closingDelay > 0));
+        $gameTemp.hudShowAbilitiesList = !!(this._abilitiesListWindow && (this._abilitiesListWindow.visible || this._abilitiesListWindow._closingDelay > 0));
 
         $gameTemp.hudShowEquipTabs = !!(this._equipTabsWindow && (this._equipTabsWindow.visible || this._equipTabsWindow._closingDelay > 0));
         $gameTemp.hudShowEquipList = !!(this._equipListWindow && (this._equipListWindow.visible || this._equipListWindow._closingDelay > 0));
 
-        // Options Flags
-        $gameTemp.hudShowOptionsCat = !!(this._optionsCatWindow && (this._optionsCatWindow.visible || this._optionsCatWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0));
-        $gameTemp.hudShowOptionsList = !!(this._optionsListWindow && (this._optionsListWindow.visible || this._optionsListWindow._closingDelay > 0 || $gameTemp._globalClosingDelay > 0));
+        $gameTemp.hudShowOptionsCat = !!(this._optionsCatWindow && (this._optionsCatWindow.visible || this._optionsCatWindow._closingDelay > 0));
+        $gameTemp.hudShowOptionsList = !!(this._optionsListWindow && (this._optionsListWindow.visible || this._optionsListWindow._closingDelay > 0));
 
         const leader = $gameParty.members()[0];
         $gameTemp.passMidImage = leader ? "img/pictures/" + leader.name().toLowerCase() + "_bg_black.png" : "img/pictures/sora_bg_black.png";
@@ -2980,9 +3052,54 @@
                         if (item.symbol === 'opt_me') vol = ConfigManager.meVolume;
                         if (item.symbol === 'opt_se') vol = ConfigManager.seVolume;
                         $gameTemp['optionAudioVol_' + i] = vol + "%";
-                    } else if (this._optionsListWindow._category === 'controls' && item.ext === 'bind') {
-                        $gameTemp['optionKey_' + i] = "[Key]";
-                        $gameTemp['optionPad_' + i] = "(Pad)";
+                    } else if (this._optionsListWindow._category === 'controls') {
+                        if (item.symbol === 'key_reset') {
+                            $gameTemp['optionKey_' + i] = "RESET KEYS";
+                            $gameTemp['optionPad_' + i] = "RESET PAD";
+                        } else if (item.symbol.startsWith('key_')) {
+                            let actionName = item.symbol.replace('key_', ''); 
+                            if (actionName === 'cancel') actionName = 'escape';
+                            if (actionName === 'pass') actionName = 'pageup';
+
+                            const getKeyName = (act) => {
+                                for (let key in Input.keyMapper) {
+                                    if (Input.keyMapper[key] === act) {
+                                        const k = parseInt(key);
+                                        if (k >= 65 && k <= 90) return String.fromCharCode(k);
+                                        if (k === 38) return "Up"; if (k === 40) return "Down";
+                                        if (k === 37) return "Left"; if (k === 39) return "Right";
+                                        if (k === 13) return "Enter"; if (k === 27 || k === 88) return "Esc"; 
+                                        if (k === 16) return "Shift"; if (k === 33 || k === 81) return "Q";
+                                        return "Key " + k;
+                                    }
+                                }
+                                return "Unbound";
+                            };
+
+                            const getPadName = (act) => {
+                                let padAct = act;
+                                if (act === 'escape') padAct = 'cancel';
+                                
+                                for (let btn in Input.gamepadMapper) {
+                                    if (Input.gamepadMapper[btn] === padAct) {
+                                        const b = parseInt(btn);
+                                        if (b === 0) return "A"; if (b === 1) return "B";
+                                        if (b === 2) return "X"; if (b === 3) return "Y";
+                                        if (b === 4) return "LB"; if (b === 5) return "RB";
+                                        if (b === 12) return "D-Up"; if (b === 13) return "D-Down";
+                                        if (b === 14) return "D-Left"; if (b === 15) return "D-Right";
+                                        return "Btn " + b;
+                                    }
+                                }
+                                return "Unbound";
+                            };
+
+                            $gameTemp['optionKey_' + i] = "[" + getKeyName(actionName) + "]";
+                            $gameTemp['optionPad_' + i] = "(" + getPadName(actionName) + ")";
+                        } else {
+                            $gameTemp['optionKey_' + i] = "";
+                            $gameTemp['optionPad_' + i] = "";
+                        }
                     }
                 } else {
                     $gameTemp['optionName' + i] = "";
@@ -3164,7 +3281,7 @@
         }
 
         if (this._equipTabsWindow || this._equipListWindow) {
-            let statMode = 0; // 0 = Tabs (--), 1 = List Mode
+            let statMode = 0;
             if (this._equipListWindow && this._equipListWindow.active && $gameTemp.equipSelectedActor >= 0) {
                 statMode = 1;
             }
