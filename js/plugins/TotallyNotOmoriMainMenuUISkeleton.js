@@ -118,6 +118,10 @@
     const PASS_SLOT_DIST_X = 220; 
     const PASS_SLOT_DIST_Y = 220;
 
+    // =======================================================
+    // 1.01. PASS CARD POSITIONING & ULTRA HUD FORCING
+    // =======================================================
+
     const passSlotX = (slot) => slot === 0 ? 0 : slot === 1 ? PASS_SLOT_DIST_X : slot === 2 ? 0 : -PASS_SLOT_DIST_X;
     const passSlotY = (slot) => slot === 0 ? -PASS_SLOT_DIST_Y : slot === 1 ? 0 : slot === 2 ? PASS_SLOT_DIST_Y : 0;
     const passOriginX = (slot) => slot === 0 ? 15 : slot === 1 ? -15 : slot === 2 ? -15 : 15;
@@ -165,22 +169,305 @@
     };
 
     // =======================================================
+    // 1.02. CUSTOM KEYBINDING INTERCEPTORS
+    // =======================================================
+
+    const CONTROL_KEY_ACTIONS = {
+        key_up: 'up',
+        key_down: 'down',
+        key_left: 'left',
+        key_right: 'right',
+        key_ok: 'ok',
+        key_cancel: 'escape',
+        key_shift: 'shift',
+        key_pass: 'pageup'
+    };
+    const CONTROL_PAD_ACTIONS = {
+        key_up: 'up',
+        key_down: 'down',
+        key_left: 'left',
+        key_right: 'right',
+        key_ok: 'ok',
+        key_cancel: 'cancel',
+        key_shift: 'shift',
+        key_pass: 'pageup'
+    };
+    const CONTROL_KEY_DEFAULTS = {
+        up: 87,
+        down: 83,
+        left: 65,
+        right: 68,
+        ok: 13,
+        escape: 27,
+        shift: 16,
+        pageup: 81
+    };
+    const CONTROL_PAD_DEFAULTS = {
+        up: 12,
+        down: 13,
+        left: 14,
+        right: 15,
+        ok: 0,
+        cancel: 1,
+        shift: 2,
+        pageup: 3
+    };
+    let reverieBaseKeyMapper = null;
+    let reverieBaseGamepadMapper = null;
+    const DISABLED_KEY_MOVEMENT_ALIASES = [37, 38, 39, 40, 98, 100, 102, 104];
+    const OLD_ARROW_KEY_DEFAULTS = { up: 38, down: 40, left: 37, right: 39 };
+
+    const cloneControlBindings = (bindings) => Object.assign({}, bindings);
+
+    const normalizeControlBindings = (bindings, defaults) => {
+        const result = {};
+        for (const action in defaults) {
+            const value = Number(bindings && bindings[action]);
+            result[action] = Number.isFinite(value) ? value : defaults[action];
+        }
+        return result;
+    };
+
+    const controlActionForSymbol = (symbol, device) => {
+        return device === 'gamepad' ? CONTROL_PAD_ACTIONS[symbol] : CONTROL_KEY_ACTIONS[symbol];
+    };
+
+    const keyNameFromCode = (keyCode) => {
+        if (keyCode >= 65 && keyCode <= 90) return String.fromCharCode(keyCode);
+        if (keyCode >= 48 && keyCode <= 57) return String.fromCharCode(keyCode);
+        if (keyCode >= 96 && keyCode <= 105) return "Num " + (keyCode - 96);
+        if (keyCode >= 112 && keyCode <= 123) return "F" + (keyCode - 111);
+
+        const names = {
+            8: "Backspace",
+            9: "Tab",
+            13: "Enter",
+            16: "Shift",
+            17: "Ctrl",
+            18: "Alt",
+            20: "Caps",
+            27: "Esc",
+            32: "Space",
+            33: "PageUp",
+            34: "PageDown",
+            35: "End",
+            36: "Home",
+            37: "Left",
+            38: "Up",
+            39: "Right",
+            40: "Down",
+            45: "Insert",
+            46: "Delete",
+            186: ";",
+            187: "=",
+            188: ",",
+            189: "-",
+            190: ".",
+            191: "/",
+            192: "`",
+            219: "[",
+            220: "\\",
+            221: "]",
+            222: "'"
+        };
+        return names[keyCode] || "Key " + keyCode;
+    };
+
+    const padNameFromButton = (buttonId) => {
+        const names = {
+            0: "A",
+            1: "B",
+            2: "X",
+            3: "Y",
+            4: "LB",
+            5: "RB",
+            6: "LT",
+            7: "RT",
+            8: "Back",
+            9: "Start",
+            10: "L3",
+            11: "R3",
+            12: "D-Up",
+            13: "D-Down",
+            14: "D-Left",
+            15: "D-Right"
+        };
+        return names[buttonId] || "Btn " + buttonId;
+    };
+
+    const controlBindingName = (symbol, device) => {
+        const action = controlActionForSymbol(symbol, device);
+        if (!action) return "";
+
+        if (device === 'gamepad') {
+            const bindings = normalizeControlBindings(ConfigManager.reveriePadBindings, CONTROL_PAD_DEFAULTS);
+            return padNameFromButton(bindings[action]);
+        } else {
+            const bindings = normalizeControlBindings(ConfigManager.reverieKeyBindings, CONTROL_KEY_DEFAULTS);
+            return keyNameFromCode(bindings[action]);
+        }
+    };
+
+    const applyReverieInputBindings = () => {
+        if (!reverieBaseKeyMapper || !reverieBaseGamepadMapper) return;
+
+        const keyBindings = normalizeControlBindings(ConfigManager.reverieKeyBindings, CONTROL_KEY_DEFAULTS);
+        const padBindings = normalizeControlBindings(ConfigManager.reveriePadBindings, CONTROL_PAD_DEFAULTS);
+
+        const keyMapper = Object.assign({}, reverieBaseKeyMapper);
+        for (const keyCode of DISABLED_KEY_MOVEMENT_ALIASES) {
+            delete keyMapper[keyCode];
+        }
+        for (const action in CONTROL_KEY_DEFAULTS) {
+            delete keyMapper[CONTROL_KEY_DEFAULTS[action]];
+        }
+        for (const action in keyBindings) {
+            keyMapper[keyBindings[action]] = action;
+        }
+        Input.keyMapper = keyMapper;
+
+        const gamepadMapper = Object.assign({}, reverieBaseGamepadMapper);
+        for (const action in CONTROL_PAD_DEFAULTS) {
+            delete gamepadMapper[CONTROL_PAD_DEFAULTS[action]];
+        }
+        for (const action in padBindings) {
+            gamepadMapper[padBindings[action]] = action;
+        }
+        Input.gamepadMapper = gamepadMapper;
+
+        ConfigManager.reverieKeyBindings = keyBindings;
+        ConfigManager.reveriePadBindings = padBindings;
+    };
+
+    const setReverieControlBinding = (device, symbol, inputCode) => {
+        const action = controlActionForSymbol(symbol, device);
+        if (!action && action !== 0) return false;
+
+        const isGamepad = device === 'gamepad';
+        const defaults = isGamepad ? CONTROL_PAD_DEFAULTS : CONTROL_KEY_DEFAULTS;
+        const current = normalizeControlBindings(
+            isGamepad ? ConfigManager.reveriePadBindings : ConfigManager.reverieKeyBindings,
+            defaults
+        );
+        const oldInput = current[action];
+
+        for (const otherAction in current) {
+            if (otherAction !== action && current[otherAction] === inputCode) {
+                current[otherAction] = oldInput;
+                break;
+            }
+        }
+
+        current[action] = inputCode;
+        if (isGamepad) ConfigManager.reveriePadBindings = current;
+        else ConfigManager.reverieKeyBindings = current;
+        applyReverieInputBindings();
+        return true;
+    };
+
+    const migrateArrowMovementBindings = (bindings) => {
+        if (!bindings) return bindings;
+        for (const action in OLD_ARROW_KEY_DEFAULTS) {
+            if (bindings[action] === OLD_ARROW_KEY_DEFAULTS[action]) {
+                bindings[action] = CONTROL_KEY_DEFAULTS[action];
+            }
+        }
+        return bindings;
+    };
+
+    // =======================================================
     // 1.05. CONFIGURATION DEFAULTS & OVERRIDES
     // =======================================================
 
     ConfigManager.customResIndex = ConfigManager.customResIndex !== undefined ? ConfigManager.customResIndex : 0;
     ConfigManager.battleTextSpeed = ConfigManager.battleTextSpeed !== undefined ? ConfigManager.battleTextSpeed : 1;
-    
+    ConfigManager.reverieKeyBindings = migrateArrowMovementBindings(normalizeControlBindings(ConfigManager.reverieKeyBindings, CONTROL_KEY_DEFAULTS));
+    ConfigManager.reveriePadBindings = normalizeControlBindings(ConfigManager.reveriePadBindings, CONTROL_PAD_DEFAULTS);
+
+    Input.gamepadMapper[1] = 'cancel';
+    Input.gamepadMapper[3] = 'pageup';
+    reverieBaseKeyMapper = Object.assign({}, Input.keyMapper);
+    reverieBaseGamepadMapper = Object.assign({}, Input.gamepadMapper);
+    applyReverieInputBindings();
+
+    const _ConfigManager_makeData = ConfigManager.makeData;
+    ConfigManager.makeData = function() {
+        const config = _ConfigManager_makeData.call(this);
+        config.battleTextSpeed = this.battleTextSpeed;
+        config.reverieBindingVersion = 2;
+        config.reverieKeyBindings = cloneControlBindings(this.reverieKeyBindings);
+        config.reveriePadBindings = cloneControlBindings(this.reveriePadBindings);
+        return config;
+    };
+
     const _ConfigManager_applyData = ConfigManager.applyData;
     ConfigManager.applyData = function(config) {
         _ConfigManager_applyData.call(this, config);
         if (config.alwaysDash !== true) {
             this.alwaysDash = false; 
         }
+        this.battleTextSpeed = Number.isFinite(Number(config.battleTextSpeed)) ? Number(config.battleTextSpeed).clamp(0, 2) : 1;
+        this.reverieKeyBindings = normalizeControlBindings(config.reverieKeyBindings, CONTROL_KEY_DEFAULTS);
+        if (config.reverieBindingVersion !== 2) {
+            migrateArrowMovementBindings(this.reverieKeyBindings);
+        }
+        this.reveriePadBindings = normalizeControlBindings(config.reveriePadBindings, CONTROL_PAD_DEFAULTS);
+        applyReverieInputBindings();
     };
 
-    Input.gamepadMapper[1] = 'cancel';
-    Input.gamepadMapper[3] = 'pageup';
+    const _Input_onKeyDown_ReverieMenu = Input._onKeyDown;
+    Input._onKeyDown = function(event) {
+        if ($gameTemp && $gameTemp.optionsRebindActive) {
+            if ($gameTemp.optionsRebindDevice === 'keyboard' && !event.repeat) {
+                this._reverieLastKeyCode = event.keyCode;
+            }
+            event.preventDefault();
+            return;
+        }
+        _Input_onKeyDown_ReverieMenu.call(this, event);
+    };
+
+    const _Input_updateGamepadState_ReverieMenu = Input._updateGamepadState;
+    Input._updateGamepadState = function(gamepad) {
+        if ($gameTemp && $gameTemp.optionsRebindActive) {
+            const lastState = this._gamepadStates[gamepad.index] || [];
+            const newState = [];
+            const buttons = gamepad.buttons;
+            const axes = gamepad.axes;
+            const threshold = 0.5;
+
+            newState[12] = false;
+            newState[13] = false;
+            newState[14] = false;
+            newState[15] = false;
+            for (let i = 0; i < buttons.length; i++) {
+                newState[i] = buttons[i].pressed;
+            }
+            if (axes[1] < -threshold) newState[12] = true;
+            else if (axes[1] > threshold) newState[13] = true;
+            if (axes[0] < -threshold) newState[14] = true;
+            else if (axes[0] > threshold) newState[15] = true;
+
+            for (let j = 0; j < newState.length; j++) {
+                if ($gameTemp.optionsRebindDevice === 'gamepad' && newState[j] && !lastState[j]) {
+                    this._reverieLastPadButton = j;
+                    break;
+                }
+            }
+            this._gamepadStates[gamepad.index] = newState;
+            return;
+        }
+        _Input_updateGamepadState_ReverieMenu.call(this, gamepad);
+    };
+
+    const _Window_Message_updateShowFast_ReverieMenu = Window_Message.prototype.updateShowFast;
+    Window_Message.prototype.updateShowFast = function() {
+        if (ConfigManager.commandRemember) {
+            _Window_Message_updateShowFast_ReverieMenu.call(this);
+        } else {
+            this._showFast = false;
+        }
+    };
 
     const applyResolution = function() {
         if (ConfigManager.customResIndex === 1) Graphics._requestFullScreen();
@@ -217,6 +504,13 @@
         this.passCardImage2 = "img/pictures/sora_bg_black.png";
         this.passCardImage3 = "img/pictures/sora_bg_black.png";
         this.passPhotoName = "img/pictures/pass_sora_to_gin.png";
+        this.hudShowOptionsBindPrompt = false;
+        this.optionsRebindActive = false;
+        this.optionsRebindDevice = "";
+        this.optionsRebindSymbol = "";
+        this.optionsRebindPrompt = "";
+        this.optionsRebindTarget = "";
+        this.optionsRebindCurrent = "";
     };
 
     // =======================================================
@@ -603,6 +897,7 @@
         if ($gameTemp && ($gameTemp._customMenuOpen || $gameTemp._globalClosingDelay > 0)) { 
             Scene_Base.prototype.update.call(this);
 
+            this.updateOptionsRebind();
             this.updatePassAnimations();
             this.updateHUDMakerBridge(); 
 
@@ -1008,6 +1303,8 @@
                     $gameTemp.hudShowOptionsDesc = false;
                     $gameTemp.hudShowMainMenu = false;
                     $gameTemp._directPassMode = false;
+                    $gameTemp.hudShowOptionsBindPrompt = false;
+                    $gameTemp.optionsRebindActive = false;
 
                     this._commandWindow.hide();
                     this._commandWindow.deactivate();
@@ -1076,6 +1373,7 @@
     // =======================================================
     const isReverieMenuLocked = function(win) {
         if (!$gameTemp) return false;
+        if ($gameTemp.optionsRebindActive) return true;
         if ($gameTemp._menuCursorDelay > 0) return true;
         if ($gameTemp._globalClosingDelay > 0) return true;
         if (win && win._closingDelay > 0) return true;
@@ -1567,7 +1865,17 @@
             if (symbol === 'sys_load') { SoundManager.playOk(); this.callHandler('sys_load'); } 
             else if (symbol === 'sys_title' || symbol === 'sys_exit') { SoundManager.playOk(); this.callHandler('sys_confirm'); }
         } else if (this._category === 'controls') {
-            SoundManager.playOk();
+            if (symbol === 'key_reset') {
+                SoundManager.playOk();
+                if (SceneManager._scene && SceneManager._scene.resetOptionsBinding) {
+                    SceneManager._scene.resetOptionsBinding(this._bindMode === 2 ? 'gamepad' : 'keyboard');
+                }
+            } else if (controlActionForSymbol(symbol, this._bindMode === 2 ? 'gamepad' : 'keyboard')) {
+                SoundManager.playOk();
+                if (SceneManager._scene && SceneManager._scene.startOptionsRebind) {
+                    SceneManager._scene.startOptionsRebind(symbol, this._bindMode === 2 ? 'gamepad' : 'keyboard');
+                }
+            }
         }
     };
 
@@ -2353,6 +2661,80 @@
         this._optionsListWindow.activate();
     };
 
+    Scene_Map.prototype.startOptionsRebind = function(symbol, device) {
+        const action = controlActionForSymbol(symbol, device);
+        if (!action) return;
+
+        const item = this._optionsListWindow && this._optionsListWindow._list
+            ? this._optionsListWindow._list[this._optionsListWindow.index()]
+            : null;
+        const label = item ? item.name : "";
+
+        this._optionsListWindow.deactivate();
+        Input._reverieLastKeyCode = null;
+        Input._reverieLastPadButton = null;
+
+        $gameTemp.optionsRebindActive = true;
+        $gameTemp.hudShowOptionsBindPrompt = true;
+        $gameTemp.optionsRebindDevice = device;
+        $gameTemp.optionsRebindSymbol = symbol;
+        $gameTemp.optionsRebindPrompt = device === 'gamepad' ? "PRESS A BUTTON" : "PRESS A KEY";
+        $gameTemp.optionsRebindTarget = label;
+        $gameTemp.optionsRebindCurrent = controlBindingName(symbol, device);
+    };
+
+    Scene_Map.prototype.updateOptionsRebind = function() {
+        if (!$gameTemp || !$gameTemp.optionsRebindActive) return;
+
+        const device = $gameTemp.optionsRebindDevice;
+        let inputCode = null;
+        if (device === 'keyboard' && Input._reverieLastKeyCode !== undefined && Input._reverieLastKeyCode !== null) {
+            inputCode = Input._reverieLastKeyCode;
+            Input._reverieLastKeyCode = null;
+        } else if (device === 'gamepad' && Input._reverieLastPadButton !== undefined && Input._reverieLastPadButton !== null) {
+            inputCode = Input._reverieLastPadButton;
+            Input._reverieLastPadButton = null;
+        }
+
+        if (inputCode === null) return;
+
+        if (setReverieControlBinding(device, $gameTemp.optionsRebindSymbol, inputCode)) {
+            $gameTemp.optionsRebindCurrent = device === 'gamepad' ? padNameFromButton(inputCode) : keyNameFromCode(inputCode);
+            ConfigManager.save();
+            SoundManager.playOk();
+        } else {
+            SoundManager.playBuzzer();
+        }
+        this.finishOptionsRebind();
+    };
+
+    Scene_Map.prototype.finishOptionsRebind = function() {
+        $gameTemp.optionsRebindActive = false;
+        $gameTemp.hudShowOptionsBindPrompt = false;
+        $gameTemp.optionsRebindDevice = "";
+        $gameTemp.optionsRebindSymbol = "";
+        $gameTemp.optionsRebindPrompt = "";
+        $gameTemp.optionsRebindTarget = "";
+
+        if (this._optionsListWindow) {
+            this._optionsListWindow.activate();
+            this._optionsListWindow.refresh();
+        }
+        Input._latestButton = null;
+        Input._pressedTime = 0;
+    };
+
+    Scene_Map.prototype.resetOptionsBinding = function(device) {
+        if (device === 'gamepad') {
+            ConfigManager.reveriePadBindings = cloneControlBindings(CONTROL_PAD_DEFAULTS);
+        } else {
+            ConfigManager.reverieKeyBindings = cloneControlBindings(CONTROL_KEY_DEFAULTS);
+        }
+        applyReverieInputBindings();
+        ConfigManager.save();
+        if (this._optionsListWindow) this._optionsListWindow.refresh();
+    };
+
     Scene_Map.prototype.createEquipSubWindows = function() {
         const w = Graphics.boxWidth - (MENU_MARGIN_X * 2);
         const h = this.calcWindowHeight(4, true);
@@ -2617,6 +2999,13 @@
         $gameTemp.optListIsAnimatingIn = false;
         $gameTemp.optDescIsAnimatingIn = false;
         $gameTemp.optionsAnimActive = false;
+        $gameTemp.hudShowOptionsBindPrompt = false;
+        $gameTemp.optionsRebindActive = false;
+        $gameTemp.optionsRebindDevice = "";
+        $gameTemp.optionsRebindSymbol = "";
+        $gameTemp.optionsRebindPrompt = "";
+        $gameTemp.optionsRebindTarget = "";
+        $gameTemp.optionsRebindCurrent = "";
 
         $gameTemp.hudShowPass = false;
         $gameTemp.passAnimState = 0; 
@@ -3057,45 +3446,8 @@
                             $gameTemp['optionKey_' + i] = "RESET KEYS";
                             $gameTemp['optionPad_' + i] = "RESET PAD";
                         } else if (item.symbol.startsWith('key_')) {
-                            let actionName = item.symbol.replace('key_', ''); 
-                            if (actionName === 'cancel') actionName = 'escape';
-                            if (actionName === 'pass') actionName = 'pageup';
-
-                            const getKeyName = (act) => {
-                                for (let key in Input.keyMapper) {
-                                    if (Input.keyMapper[key] === act) {
-                                        const k = parseInt(key);
-                                        if (k >= 65 && k <= 90) return String.fromCharCode(k);
-                                        if (k === 38) return "Up"; if (k === 40) return "Down";
-                                        if (k === 37) return "Left"; if (k === 39) return "Right";
-                                        if (k === 13) return "Enter"; if (k === 27 || k === 88) return "Esc"; 
-                                        if (k === 16) return "Shift"; if (k === 33 || k === 81) return "Q";
-                                        return "Key " + k;
-                                    }
-                                }
-                                return "Unbound";
-                            };
-
-                            const getPadName = (act) => {
-                                let padAct = act;
-                                if (act === 'escape') padAct = 'cancel';
-                                
-                                for (let btn in Input.gamepadMapper) {
-                                    if (Input.gamepadMapper[btn] === padAct) {
-                                        const b = parseInt(btn);
-                                        if (b === 0) return "A"; if (b === 1) return "B";
-                                        if (b === 2) return "X"; if (b === 3) return "Y";
-                                        if (b === 4) return "LB"; if (b === 5) return "RB";
-                                        if (b === 12) return "D-Up"; if (b === 13) return "D-Down";
-                                        if (b === 14) return "D-Left"; if (b === 15) return "D-Right";
-                                        return "Btn " + b;
-                                    }
-                                }
-                                return "Unbound";
-                            };
-
-                            $gameTemp['optionKey_' + i] = "[" + getKeyName(actionName) + "]";
-                            $gameTemp['optionPad_' + i] = "(" + getPadName(actionName) + ")";
+                            $gameTemp['optionKey_' + i] = "[" + controlBindingName(item.symbol, 'keyboard') + "]";
+                            $gameTemp['optionPad_' + i] = "(" + controlBindingName(item.symbol, 'gamepad') + ")";
                         } else {
                             $gameTemp['optionKey_' + i] = "";
                             $gameTemp['optionPad_' + i] = "";

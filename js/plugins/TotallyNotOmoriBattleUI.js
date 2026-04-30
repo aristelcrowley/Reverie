@@ -110,6 +110,12 @@ applyBlackBox(Window_BattleLog);
 
 Window_BattleLog.prototype.lineHeight = function() { return 28; }; 
 Window_BattleLog.prototype.maxLines = function() { return 3; }; 
+Window_BattleLog.prototype.messageSpeed = function() {
+    const speed = ConfigManager.battleTextSpeed !== undefined ? ConfigManager.battleTextSpeed : 1;
+    if (speed === 0) return 8;
+    if (speed === 2) return 28;
+    return 16;
+};
 
 Window_BattleLog.prototype.resetFontSettings = function() {
     this.contents.fontFace = CUSTOM_FONT;
