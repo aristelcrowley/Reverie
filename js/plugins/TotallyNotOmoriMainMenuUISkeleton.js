@@ -193,10 +193,10 @@
         key_pass: 'pageup'
     };
     const CONTROL_KEY_DEFAULTS = {
-        up: 38,
-        down: 40,
-        left: 37,
-        right: 39,
+        up: 87,
+        down: 83,
+        left: 65,
+        right: 68,
         ok: 13,
         escape: 27,
         shift: 16,
@@ -214,6 +214,8 @@
     };
     let reverieBaseKeyMapper = null;
     let reverieBaseGamepadMapper = null;
+    const DISABLED_KEY_MOVEMENT_ALIASES = [37, 38, 39, 40, 98, 100, 102, 104];
+    const OLD_ARROW_KEY_DEFAULTS = { up: 38, down: 40, left: 37, right: 39 };
 
     const cloneControlBindings = (bindings) => Object.assign({}, bindings);
 
@@ -313,6 +315,9 @@
         const padBindings = normalizeControlBindings(ConfigManager.reveriePadBindings, CONTROL_PAD_DEFAULTS);
 
         const keyMapper = Object.assign({}, reverieBaseKeyMapper);
+        for (const keyCode of DISABLED_KEY_MOVEMENT_ALIASES) {
+            delete keyMapper[keyCode];
+        }
         for (const action in CONTROL_KEY_DEFAULTS) {
             delete keyMapper[CONTROL_KEY_DEFAULTS[action]];
         }
@@ -360,13 +365,23 @@
         return true;
     };
 
+    const migrateArrowMovementBindings = (bindings) => {
+        if (!bindings) return bindings;
+        for (const action in OLD_ARROW_KEY_DEFAULTS) {
+            if (bindings[action] === OLD_ARROW_KEY_DEFAULTS[action]) {
+                bindings[action] = CONTROL_KEY_DEFAULTS[action];
+            }
+        }
+        return bindings;
+    };
+
     // =======================================================
     // 1.05. CONFIGURATION DEFAULTS & OVERRIDES
     // =======================================================
 
     ConfigManager.customResIndex = ConfigManager.customResIndex !== undefined ? ConfigManager.customResIndex : 0;
     ConfigManager.battleTextSpeed = ConfigManager.battleTextSpeed !== undefined ? ConfigManager.battleTextSpeed : 1;
-    ConfigManager.reverieKeyBindings = normalizeControlBindings(ConfigManager.reverieKeyBindings, CONTROL_KEY_DEFAULTS);
+    ConfigManager.reverieKeyBindings = migrateArrowMovementBindings(normalizeControlBindings(ConfigManager.reverieKeyBindings, CONTROL_KEY_DEFAULTS));
     ConfigManager.reveriePadBindings = normalizeControlBindings(ConfigManager.reveriePadBindings, CONTROL_PAD_DEFAULTS);
 
     Input.gamepadMapper[1] = 'cancel';
@@ -378,6 +393,8 @@
     const _ConfigManager_makeData = ConfigManager.makeData;
     ConfigManager.makeData = function() {
         const config = _ConfigManager_makeData.call(this);
+        config.battleTextSpeed = this.battleTextSpeed;
+        config.reverieBindingVersion = 2;
         config.reverieKeyBindings = cloneControlBindings(this.reverieKeyBindings);
         config.reveriePadBindings = cloneControlBindings(this.reveriePadBindings);
         return config;
@@ -389,7 +406,11 @@
         if (config.alwaysDash !== true) {
             this.alwaysDash = false; 
         }
+        this.battleTextSpeed = Number.isFinite(Number(config.battleTextSpeed)) ? Number(config.battleTextSpeed).clamp(0, 2) : 1;
         this.reverieKeyBindings = normalizeControlBindings(config.reverieKeyBindings, CONTROL_KEY_DEFAULTS);
+        if (config.reverieBindingVersion !== 2) {
+            migrateArrowMovementBindings(this.reverieKeyBindings);
+        }
         this.reveriePadBindings = normalizeControlBindings(config.reveriePadBindings, CONTROL_PAD_DEFAULTS);
         applyReverieInputBindings();
     };
@@ -437,6 +458,15 @@
             return;
         }
         _Input_updateGamepadState_ReverieMenu.call(this, gamepad);
+    };
+
+    const _Window_Message_updateShowFast_ReverieMenu = Window_Message.prototype.updateShowFast;
+    Window_Message.prototype.updateShowFast = function() {
+        if (ConfigManager.commandRemember) {
+            _Window_Message_updateShowFast_ReverieMenu.call(this);
+        } else {
+            this._showFast = false;
+        }
     };
 
     const applyResolution = function() {
