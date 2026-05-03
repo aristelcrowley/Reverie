@@ -285,7 +285,7 @@ FontManager.load("ReverieFontBold", "AmaticSC-Bold.ttf");
                 break;
 
             case "options":
-                SceneManager.push(Scene_Options);
+                SceneManager.push(Scene_ReverieTitleOptions);
                 break;
         }
 
