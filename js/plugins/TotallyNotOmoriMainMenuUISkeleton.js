@@ -2759,6 +2759,9 @@
         if (Scene_Title.prototype.createBackground) {
             Scene_Title.prototype.createBackground.call(this);
         }
+        if (Scene_Title.prototype.createTitle) {
+            Scene_Title.prototype.createTitle.call(this);
+        }
         this.createUltraHUD();
         this.createWindowLayer();
         this.createOptionsSubWindows();
@@ -2818,6 +2821,7 @@
     Scene_ReverieTitleOptions.prototype.initTitleOptionsState = function() {
         if (!$gameTemp) return;
         this._titleOptionsClosing = false;
+        this._titleOptionsNoAnim = true;
         $gameTemp._customMenuOpen = true;
         $gameTemp._menuCursorDelay = 0;
         $gameTemp._globalClosingDelay = 0;
@@ -2825,12 +2829,12 @@
         $gameTemp.equipAnimState = 0;
         $gameTemp.equipAnimTimer = 0;
 
-        $gameTemp.hudShowOptionsCat = false;
-        $gameTemp.hudShowOptionsList = false;
+        $gameTemp.hudShowOptionsCat = true;
+        $gameTemp.hudShowOptionsList = true;
         $gameTemp.hudShowOptionsDesc = false;
         $gameTemp.hudShowOptionsConfirm = false;
 
-        $gameTemp.optCatInTimer = 1;
+        $gameTemp.optCatInTimer = 0;
         $gameTemp.optListInTimer = 0;
         $gameTemp.optDescInTimer = 0;
         $gameTemp.optDescOutTimer = 0;
@@ -2840,7 +2844,18 @@
         $gameTemp.optCatIsAnimatingIn = false;
         $gameTemp.optListIsAnimatingIn = false;
         $gameTemp.optDescIsAnimatingIn = false;
-        $gameTemp.optionsAnimActive = false;
+        $gameTemp.optionsAnimActive = true;
+
+        if (this._optionsCatWindow) {
+            this._optionsCatWindow.show();
+            this._optionsCatWindow.activate();
+            this._optionsCatWindow.select(0);
+        }
+        if (this._optionsListWindow) {
+            this._optionsListWindow.setCategory('general');
+            this._optionsListWindow.deselect();
+            this._optionsListWindow.show();
+        }
 
         $gameTemp.hudShowOptionsBindPrompt = false;
         $gameTemp.optionsRebindActive = false;
@@ -2896,6 +2911,24 @@
     Scene_ReverieTitleOptions.prototype.resetOptionsBinding = Scene_Map.prototype.resetOptionsBinding;
 
     Scene_ReverieTitleOptions.prototype.onOptionsCancel = function() {
+        if (this._titleOptionsNoAnim) {
+            this._optionsCatWindow.deactivate();
+            this._optionsCatWindow.deselect();
+            this._optionsCatWindow.hide();
+            this._optionsListWindow.deactivate();
+            this._optionsListWindow.hide();
+            if (this._optionsConfirmWindow) {
+                this._optionsConfirmWindow.deactivate();
+                this._optionsConfirmWindow.hide();
+            }
+            $gameTemp.hudShowOptionsCat = false;
+            $gameTemp.hudShowOptionsList = false;
+            $gameTemp.hudShowOptionsDesc = false;
+            $gameTemp.hudShowOptionsConfirm = false;
+            ConfigManager.save();
+            SceneManager.pop();
+            return;
+        }
         this._titleOptionsClosing = true;
         this._optionsCatWindow.deactivate();
         this._optionsCatWindow.deselect();
@@ -2912,7 +2945,19 @@
         Scene_Base.prototype.update.call(this);
         if (!$gameTemp) return;
 
+        if (this._bg && this._bg.opacity < 255) {
+            this._bg.opacity += 3;
+        }
+
         this.updateOptionsRebind();
+
+        if (this._titleOptionsNoAnim) {
+            if (Scene_Map.prototype.updateHUDMakerBridge) {
+                Scene_Map.prototype.updateHUDMakerBridge.call(this);
+            }
+            this.updateTitleOptionsHUD();
+            return;
+        }
 
         if ($gameTemp._menuCursorDelay > 0) {
             $gameTemp._menuCursorDelay--;
