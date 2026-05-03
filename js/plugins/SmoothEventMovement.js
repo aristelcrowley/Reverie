@@ -907,12 +907,17 @@
             }
         }
         else if (this._monsterMode === 'DIST') {
+            const allowedRegs = this.getAllowedRegions();
+            const playerRegion = $gameMap.regionId($gamePlayer.x, $gamePlayer.y);
+            const playerInAllowedRegion = allowedRegs.length === 0 || allowedRegs.includes(playerRegion);
             const sx = Math.abs(this.deltaXFrom($gamePlayer.x));
             const sy = Math.abs(this.deltaYFrom($gamePlayer.y));
             // Hitung jarak (distance manhattan / taksi)
             const distance = sx + sy; // Total blok
 
-            if (!wasChasing) {
+            if (!playerInAllowedRegion) {
+                isNowChasing = false;
+            } else if (!wasChasing) {
                 // Jika sedang tidak agresif, cek apakah player masuk ke radius Deteksi
                 if (distance <= this._monsterDist) {
                     isNowChasing = true;
