@@ -511,6 +511,11 @@
         this.optionsRebindPrompt = "";
         this.optionsRebindTarget = "";
         this.optionsRebindCurrent = "";
+        this.hudShowTitleOptionsKeys = false;
+        this.titleOptionsConfirmKey = "";
+        this.titleOptionsConfirmPad = "";
+        this.titleOptionsCancelKey = "";
+        this.titleOptionsCancelPad = "";
     };
 
     // =======================================================
@@ -2766,6 +2771,7 @@
         this.createWindowLayer();
         this.createOptionsSubWindows();
         this.initTitleOptionsState();
+        this.updateTitleOptionsHUD();
     };
 
     Scene_ReverieTitleOptions.prototype.start = function() {
@@ -2825,6 +2831,7 @@
             this._bg.opacity = 255;
         }
         $gameTemp._customMenuOpen = true;
+        $gameTemp.hudShowTitleOptionsKeys = true;
         $gameTemp._menuCursorDelay = 0;
         $gameTemp._globalClosingDelay = 0;
         $gameTemp.activeMenuSymbol = 'options';
@@ -2867,11 +2874,16 @@
         $gameTemp.optionsRebindTarget = "";
         $gameTemp.optionsRebindCurrent = "";
         $gameTemp.optionsConfirmType = "";
+        $gameTemp.titleOptionsConfirmKey = "";
+        $gameTemp.titleOptionsConfirmPad = "";
+        $gameTemp.titleOptionsCancelKey = "";
+        $gameTemp.titleOptionsCancelPad = "";
     };
 
     Scene_ReverieTitleOptions.prototype.resetTitleOptionsState = function() {
         if (!$gameTemp) return;
         $gameTemp._customMenuOpen = false;
+        $gameTemp.hudShowTitleOptionsKeys = false;
         $gameTemp._menuCursorDelay = 0;
         $gameTemp._globalClosingDelay = 0;
         $gameTemp.optCatInTimer = 0;
@@ -2898,6 +2910,10 @@
         $gameTemp.optionsRebindTarget = "";
         $gameTemp.optionsRebindCurrent = "";
         $gameTemp.optionsConfirmType = "";
+        $gameTemp.titleOptionsConfirmKey = "";
+        $gameTemp.titleOptionsConfirmPad = "";
+        $gameTemp.titleOptionsCancelKey = "";
+        $gameTemp.titleOptionsCancelPad = "";
     };
 
     Scene_ReverieTitleOptions.prototype.calcWindowHeight = Scene_Map.prototype.calcWindowHeight;
@@ -3028,6 +3044,8 @@
         if (!$gameTemp) return;
         forceUltraHUDVisible(this);
 
+        updateTitleOptionsKeyHints();
+
         hijackHUDMakerNode(this, "MainMenu", () => false, () => false, null, 0, 0, () => false, OPT_ANIM_DELAY);
         hijackHUDMakerNode(this, "StatusCards", () => false, () => false, null, 0, 0, () => false, OPT_ANIM_DELAY);
 
@@ -3046,6 +3064,16 @@
         const optDescDelay = () => $gameTemp._globalClosingDelay > 0 ? $gameTemp._globalClosingDelay : $gameTemp.optionsDescOutTimer;
         hijackHUDMakerNode(this, HMU_OPTIONS_DESC_GROUP, () => $gameTemp.optDescIsAnimatingIn, isOptDescClosing, optDescDelay, 0, SLIDE_Y_OFFSET_OPT_LIST, () => $gameTemp.hudShowOptionsDesc, OPT_ANIM_DELAY);
     };
+
+    const updateTitleOptionsKeyHints = function() {
+        if (!$gameTemp) return;
+        $gameTemp.titleOptionsConfirmKey = "[" + controlBindingName('key_ok', 'keyboard') + "]";
+        $gameTemp.titleOptionsConfirmPad = "(" + controlBindingName('key_ok', 'gamepad') + ")";
+        $gameTemp.titleOptionsCancelKey = "[" + controlBindingName('key_cancel', 'keyboard') + "]";
+        $gameTemp.titleOptionsCancelPad = "(" + controlBindingName('key_cancel', 'gamepad') + ")";
+    };
+
+    window.ReverieUpdateTitleOptionsKeyHints = updateTitleOptionsKeyHints;
 
     window.Scene_ReverieTitleOptions = Scene_ReverieTitleOptions;
 
