@@ -117,7 +117,7 @@
     "pitch": 100,
     "volume": 90
   },
-  "editMapId": 97,
+  "editMapId": 21,
   "elements": [
     "",
     "Heroic Element",
@@ -485,9 +485,9 @@
     "GOT_THE_LADDER",
     "GOT_LEADER_DONE",
     "ANN_IN_CRACK",
-    "",
-    "",
-    "",
+    "SCORPION_DEFEAT",
+    "STOP_HALU",
+    "RESET_HALU",
     "",
     "",
     "",
@@ -1513,7 +1513,7 @@
   "variables": [
     "",
     "PASSWORD",
-    "",
+    "HALU",
     "",
     "",
     "",
@@ -1713,7 +1713,7 @@
     "",
     ""
   ],
-  "versionId": 96784768,
+  "versionId": 76420592,
   "victoryMe": {
     "name": "Victory1",
     "pan": 0,
