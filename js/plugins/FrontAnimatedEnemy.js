@@ -44,7 +44,8 @@
         this._customX = null;
         this._customY = null;
         this._isAnimatedFront = false;
-        this._scale = 1.0;
+        this._frontAnimScale = 1.0;
+        this._frontAnimHasScale = false;
     };
 
     const _Sprite_Enemy_setBattler = Sprite_Enemy.prototype.setBattler;
@@ -61,6 +62,14 @@
         const note = enemy.note;
 
         this._animFrames = [];
+        this._animSpeed = 10;
+        this._animIndex = 0;
+        this._animTimer = 0;
+        this._customX = null;
+        this._customY = null;
+        this._isAnimatedFront = false;
+        this._frontAnimScale = 1.0;
+        this._frontAnimHasScale = false;
 
         // Read animation frames
         const frameRegex = /<Frame\s+(\d+):\s*(.+)>/gi;
@@ -102,9 +111,9 @@
 
         const scaleMatch = note.match(/<Upscale:\s*([\d.]+)>/i);
         if (scaleMatch) {
-            this._scale = parseFloat(scaleMatch[1]);
-            this.scale.x = this._scale;
-            this.scale.y = this._scale;
+            this._frontAnimScale = Math.max(0.1, parseFloat(scaleMatch[1]));
+            this._frontAnimHasScale = true;
+            this.applyFrontAnimatedScale();
         }
 
         // Apply custom position immediately if defined
@@ -120,7 +129,19 @@
         _Sprite_Enemy_update.call(this);
         if (this._enemy && this._isAnimatedFront) {
             this.updateFrontAnimation();
+            if (this._frontAnimHasScale) {
+                this.applyFrontAnimatedScale();
+            }
         }
+    };
+
+    Sprite_Enemy.prototype.applyFrontAnimatedScale = function () {
+        const scale = Number.isFinite(this._frontAnimScale) ? this._frontAnimScale : 1.0;
+        const signX = this.scale.x < 0 ? -1 : 1;
+        const signY = this.scale.y < 0 ? -1 : 1;
+
+        this.scale.x = signX * scale;
+        this.scale.y = signY * scale;
     };
 
     Sprite_Enemy.prototype.updateFrontAnimation = function () {
@@ -144,6 +165,9 @@
                 this._battlerName = currentName;
                 this._battlerHue = this._enemy.battlerHue();
                 this.loadBitmap(currentName);
+                if (this._frontAnimHasScale) {
+                    this.applyFrontAnimatedScale();
+                }
                 this.initVisibility();
             }
         } else {
