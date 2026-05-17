@@ -166,6 +166,23 @@
             .toLowerCase();
     }
 
+    const AUDIO_VOLUME_KEYS = ["bgmVolume", "bgsVolume", "meVolume", "seVolume"];
+
+    function allMasterVolumesAreZero() {
+        if (typeof ConfigManager === "undefined") return false;
+        return AUDIO_VOLUME_KEYS.every(key => Number(ConfigManager[key]) === 0);
+    }
+
+    function restoreMasterVolumesToDefault() {
+        ConfigManager.bgmVolume = 100;
+        ConfigManager.bgsVolume = 100;
+        ConfigManager.meVolume = 100;
+        ConfigManager.seVolume = 100;
+        if (ConfigManager.save) {
+            ConfigManager.save();
+        }
+    }
+
     function findDatabaseIdByName(list, name) {
         if (!list || !name) return 0;
         const needle = String(name).trim().toLowerCase();
@@ -193,6 +210,12 @@
             this.logHistory = [];
             this.parser = new CommandParser();
             this.registerDefaultCommands();
+        }
+
+        ensureAudioDefaultsForDebugTransfer() {
+            if (!allMasterVolumesAreZero()) return;
+            restoreMasterVolumesToDefault();
+            this.log("Audio master volumes were all 0; restored BGM/BGS/ME/SE to 100 before teleport.");
         }
 
         register(name, handler, description = "") {
@@ -426,6 +449,7 @@
             }
 
             $gamePlayer.reserveTransfer(mapId, x, y, direction, fadeType);
+            this.ensureAudioDefaultsForDebugTransfer();
             SceneManager.goto(Scene_Map);
             this.log(`Teleporting to Map ${mapId} (${x}, ${y}).`);
             if (this.ui) this.ui.hide();

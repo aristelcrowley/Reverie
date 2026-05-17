@@ -38,7 +38,7 @@
         },
 
         entriesFromEvent(event) {
-            const list = event && event.list ? event.list() : null;
+            const list = event && event.page && event.page() && event.list ? event.list() : null;
             const entries = [];
             if (!list) {
                 return entries;
@@ -130,7 +130,7 @@
         },
 
         startEvent(event) {
-            const list = event.list();
+            const list = event && event.page && event.page() ? event.list() : null;
             if (!list || list.length <= 1) {
                 return false;
             }

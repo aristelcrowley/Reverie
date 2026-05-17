@@ -644,6 +644,22 @@
     // 1.05. CONFIGURATION DEFAULTS & OVERRIDES
     // =======================================================
 
+    const AUDIO_DEFAULT_MIGRATION_VERSION = 1;
+    const AUDIO_VOLUME_KEYS = ["bgmVolume", "bgsVolume", "meVolume", "seVolume"];
+
+    const shouldRestoreAudioDefaults = (config) => {
+        if (!config) return false;
+        if (Number(config.reverieAudioDefaultVersion || 0) >= AUDIO_DEFAULT_MIGRATION_VERSION) return false;
+        return AUDIO_VOLUME_KEYS.every(key => key in config && Number(config[key]) === 0);
+    };
+
+    const restoreAudioDefaults = () => {
+        ConfigManager.bgmVolume = 100;
+        ConfigManager.bgsVolume = 100;
+        ConfigManager.meVolume = 100;
+        ConfigManager.seVolume = 100;
+    };
+
     ConfigManager.customResIndex = ConfigManager.customResIndex !== undefined ? ConfigManager.customResIndex : 0;
     ConfigManager.battleTextSpeed = ConfigManager.battleTextSpeed !== undefined ? ConfigManager.battleTextSpeed : 1;
     ConfigManager.reverieKeyBindings = migrateArrowMovementBindings(normalizeControlBindings(ConfigManager.reverieKeyBindings, CONTROL_KEY_DEFAULTS));
@@ -660,6 +676,7 @@
         const config = _ConfigManager_makeData.call(this);
         config.customResIndex = this.customResIndex;
         config.battleTextSpeed = this.battleTextSpeed;
+        config.reverieAudioDefaultVersion = AUDIO_DEFAULT_MIGRATION_VERSION;
         config.reverieBindingVersion = 2;
         config.reverieKeyBindings = cloneControlBindings(this.reverieKeyBindings);
         config.reveriePadBindings = cloneControlBindings(this.reveriePadBindings);
@@ -668,7 +685,11 @@
 
     const _ConfigManager_applyData = ConfigManager.applyData;
     ConfigManager.applyData = function(config) {
+        const restoreDefaultAudio = shouldRestoreAudioDefaults(config);
         _ConfigManager_applyData.call(this, config);
+        if (restoreDefaultAudio) {
+            restoreAudioDefaults();
+        }
         if (config.alwaysDash !== true) {
             this.alwaysDash = false; 
         }

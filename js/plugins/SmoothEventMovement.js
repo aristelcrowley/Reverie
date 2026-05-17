@@ -331,7 +331,7 @@
         let regMeta = readMeta('Dir_Reg');
         let modeMeta = readMeta('Mode');
 
-        const list = this.list();
+        const list = this.page() ? this.list() : null;
         if (list && list.length > 0) {
             for (const line of list) {
                 if (line.code !== 108 && line.code !== 408) continue;
@@ -845,7 +845,7 @@
 
     Game_Event.prototype.isBattleTouchEvent = function () {
         if (this._trigger !== 2) return false;
-        const list = this.list();
+        const list = this.page() ? this.list() : null;
         return !!(list && list.some(command => command && command.code === 301));
     };
 
@@ -971,6 +971,15 @@
         }
 
         return _Game_Event_stopCountThreshold.call(this);
+    };
+
+    const _Game_Event_isCollidedWithEvents = Game_Event.prototype.isCollidedWithEvents;
+    Game_Event.prototype.isCollidedWithEvents = function (x, y) {
+        if (this._monsterMode === 'DIST') {
+            const events = this.eventsXyNt ? this.eventsXyNt(x, y) : $gameMap.eventsXyNt(x, y).filter(event => event !== this);
+            return events.some(event => event && event.isNormalPriority && event.isNormalPriority());
+        }
+        return _Game_Event_isCollidedWithEvents.call(this, x, y);
     };
 
     //=============================================================================

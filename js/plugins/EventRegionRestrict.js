@@ -44,6 +44,10 @@
             this._allowedRegions = metaStr.split(',').map(n => Number(n.trim()));
         }
 
+        if (!this.page()) {
+            return;
+        }
+
         // 2. Cek dari Comment/Catatan Halaman (Prioritas lebih tinggi dari Note)
         const list = this.list();
         if (list && list.length > 0) {
