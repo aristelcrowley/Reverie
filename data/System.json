@@ -117,7 +117,7 @@
     "pitch": 100,
     "volume": 90
   },
-  "editMapId": 127,
+  "editMapId": 7,
   "elements": [
     "",
     "Heroic Element",
@@ -1713,7 +1713,7 @@
     "",
     ""
   ],
-  "versionId": 74564029,
+  "versionId": 63072725,
   "victoryMe": {
     "name": "Victory1",
     "pan": 0,
