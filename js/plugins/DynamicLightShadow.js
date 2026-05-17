@@ -39,6 +39,13 @@
  * @max 3
  * @default 0.35
  *
+ * @param Default Player Light Radius
+ * @type number
+ * @decimals 2
+ * @min 0.5
+ * @max 8
+ * @default 1.5
+ *
  * @command Refresh
  * @text Refresh Light Shadow
  * @desc Force this plugin to reread event comments on the current map.
@@ -54,6 +61,7 @@
  *   <IsShadow: 3, 160>
  *   <IsLight: 4, "", 180>
  *   <IsLight: 5, #F54927, 210>
+ *   <IsPlayer: "", 180, 1.5>
  *
  * Tags:
  *   <IsGround: region, mode>
@@ -70,6 +78,10 @@
  *     Draws colored light on a region. The color can be "" for white or a hex
  *     color like #F54927.
  *
+ *   <IsPlayer: color, opacity, radius>
+ *     Draws a round light around the player. The color can be "" for white or a
+ *     hex color like #F54927. Radius is measured in tiles.
+ *
  * Opacity uses RPG Maker's 0 to 255 range.
  */
 
@@ -79,7 +91,8 @@
     const PLUGIN_NAME = "DynamicLightShadow";
     const params = PluginManager.parameters(PLUGIN_NAME);
 
-    const COMMENT_TAG_REGEX = /<(IsGround|IsShadow|IsLight)\s*:\s*([^>]*)>/gi;
+    const COMMENT_TAG_REGEX =
+        /<(IsGround|IsShadow|IsLight|IsPlayer)(?:\s*:\s*([^>]*))?>/gi;
     const COMMENT_CODES = [108, 408];
 
     const SHADOW_RGB = { r: 0, g: 0, b: 0 };
@@ -117,6 +130,13 @@
         NATURAL_EFFECT_RADIUS - 0.05
     );
     const NATURAL_SCAN_RADIUS = Math.ceil(NATURAL_EFFECT_RADIUS);
+    const DEFAULT_PLAYER_LIGHT_RADIUS = readNumberParam(
+        "Default Player Light Radius",
+        1.5,
+        0.5,
+        8
+    );
+    const OVERLAY_Z = 5.5;
 
     function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
@@ -225,6 +245,15 @@
         return clamp(Math.round(number), 0, 255);
     }
 
+    function parseRadius(value, fallback) {
+        const text = cleanValue(value);
+        if (!text) return fallback;
+
+        const number = Number(text);
+        if (!Number.isFinite(number)) return fallback;
+        return clamp(number, 0.5, 8);
+    }
+
     function parseColor(value) {
         const text = cleanValue(value);
         if (!text) return { color: "#ffffff", rgb: WHITE_RGB };
@@ -313,6 +342,7 @@
                 lightRegions: new Set(),
                 shadows: [],
                 lights: [],
+                playerLights: [],
                 hasEffects: false
             };
         },
@@ -326,7 +356,9 @@
             }
 
             settings.hasEffects =
-                settings.shadows.length > 0 || settings.lights.length > 0;
+                settings.shadows.length > 0 ||
+                settings.lights.length > 0 ||
+                settings.playerLights.length > 0;
             return settings;
         },
 
@@ -374,6 +406,14 @@
                     for (const regionId of regionIds) {
                         settings.lightRegions.add(regionId);
                     }
+                } else if (tagName === "isplayer") {
+                    const color = parseColor(args[0]);
+                    settings.playerLights.push({
+                        color: color.color,
+                        rgb: color.rgb,
+                        opacity: parseOpacity(args[1], DEFAULT_LIGHT_OPACITY),
+                        radius: parseRadius(args[2], DEFAULT_PLAYER_LIGHT_RADIUS)
+                    });
                 }
             }
         },
@@ -444,6 +484,34 @@
 
     function sourceInfluence(distance) {
         return smoothStep(NATURAL_EFFECT_RADIUS, NATURAL_EFFECT_CORE, distance);
+    }
+
+    function playerLightCoreRadius(radius) {
+        return Math.min(NATURAL_EFFECT_CORE, radius - 0.05);
+    }
+
+    function playerLightInfluence(distance, radius) {
+        return smoothStep(radius, playerLightCoreRadius(radius), distance);
+    }
+
+    function playerRealPosition() {
+        if (!$gamePlayer) return null;
+
+        const x = Number.isFinite($gamePlayer._realX) ?
+            $gamePlayer._realX :
+            $gamePlayer.x;
+        const y = Number.isFinite($gamePlayer._realY) ?
+            $gamePlayer._realY :
+            $gamePlayer.y;
+
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+        return { x, y };
+    }
+
+    function playerPositionKey() {
+        const position = playerRealPosition();
+        if (!position) return "";
+        return position.x.toFixed(2) + "," + position.y.toFixed(2);
     }
 
     function distanceToCell(u, v, dx, dy) {
@@ -570,6 +638,38 @@
         };
     }
 
+    function playerLightMaskFor(mapX, mapY, playerX, playerY, radius) {
+        const coordinate = mapCoordinate(mapX, mapY);
+        if (!coordinate) return null;
+
+        const centerX = playerX + 0.5;
+        const centerY = playerY + 0.5;
+        const nearestX = clamp(centerX, mapX, mapX + 1);
+        const nearestY = clamp(centerY, mapY, mapY + 1);
+        const nearestDistance = Math.hypot(centerX - nearestX, centerY - nearestY);
+        if (nearestDistance > radius) return null;
+
+        const relativeX = mapX - centerX;
+        const relativeY = mapY - centerY;
+        const key = [
+            "player",
+            radius.toFixed(2),
+            relativeX.toFixed(2),
+            relativeY.toFixed(2)
+        ].join(":");
+
+        return {
+            key,
+            factor(u, v) {
+                const distance = Math.hypot(
+                    mapX + u - centerX,
+                    mapY + v - centerY
+                );
+                return playerLightInfluence(distance, radius);
+            }
+        };
+    }
+
     function mergedEntries(entries) {
         const groups = new Map();
 
@@ -589,6 +689,24 @@
             group.allRegions = group.allRegions || entry.allRegions;
             for (const regionId of entry.regionIds) {
                 group.regionIds.add(regionId);
+            }
+        }
+
+        return Array.from(groups.values());
+    }
+
+    function mergedPlayerEntries(entries) {
+        const groups = new Map();
+
+        for (const entry of entries) {
+            const key = entry.color + ":" + entry.opacity + ":" + entry.radius;
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    color: entry.color,
+                    rgb: entry.rgb,
+                    opacity: entry.opacity,
+                    radius: entry.radius
+                });
             }
         }
 
@@ -638,6 +756,9 @@
     };
 
     Sprite_DynamicLightShadow.prototype.renderKey = function(settings) {
+        const playerKey =
+            settings.playerLights.length > 0 ? playerPositionKey() : "";
+
         return [
             $gameMap.mapId(),
             DynamicLightShadow.version(),
@@ -648,7 +769,10 @@
             $gameMap.tileWidth(),
             $gameMap.tileHeight(),
             settings.shadows.length,
-            settings.lights.length
+            settings.lights.length,
+            settings.playerLights.length,
+            playerKey,
+            this.playerSpriteKey()
         ].join(":");
     };
 
@@ -668,6 +792,8 @@
         context.globalCompositeOperation = "source-over";
         this.drawEffects(context, settings.shadows, settings);
         this.drawEffects(context, settings.lights, settings);
+        this.drawPlayerEffects(context, settings.playerLights);
+        this.erasePlayerSprite(context);
         context.restore();
 
         bitmap._baseTexture.update();
@@ -712,6 +838,146 @@
         }
     };
 
+    Sprite_DynamicLightShadow.prototype.drawPlayerEffects = function(
+        context,
+        entries
+    ) {
+        if (entries.length === 0) return;
+
+        const playerPosition = playerRealPosition();
+        if (!playerPosition) return;
+
+        const groups = mergedPlayerEntries(entries);
+        const tileWidth = $gameMap.tileWidth();
+        const tileHeight = $gameMap.tileHeight();
+        const displayX = $gameMap.displayX();
+        const displayY = $gameMap.displayY();
+        const maxRadius = groups.reduce(
+            (max, entry) => Math.max(max, entry.radius),
+            DEFAULT_PLAYER_LIGHT_RADIUS
+        );
+        const padding = Math.ceil(maxRadius) + 1;
+        const startX = Math.floor(playerPosition.x) - padding;
+        const startY = Math.floor(playerPosition.y) - padding;
+        const endX = Math.ceil(playerPosition.x) + padding;
+        const endY = Math.ceil(playerPosition.y) + padding;
+
+        for (let rawY = startY; rawY <= endY; rawY++) {
+            for (let rawX = startX; rawX <= endX; rawX++) {
+                const screenX = Math.floor((rawX - displayX) * tileWidth);
+                const screenY = Math.floor((rawY - displayY) * tileHeight);
+
+                for (const entry of groups) {
+                    const mask = playerLightMaskFor(
+                        rawX,
+                        rawY,
+                        playerPosition.x,
+                        playerPosition.y,
+                        entry.radius
+                    );
+                    if (!mask) continue;
+
+                    const pattern = DynamicLightShadow.patternFor(
+                        entry,
+                        mask,
+                        tileWidth,
+                        tileHeight
+                    );
+                    context.drawImage(pattern, screenX, screenY);
+                }
+            }
+        }
+    };
+
+    Sprite_DynamicLightShadow.prototype.playerCharacterSprite = function() {
+        const spriteset = this._spriteset;
+        const sprites = spriteset && spriteset._characterSprites;
+        if (!sprites) return null;
+        return sprites.find(sprite => sprite && sprite._character === $gamePlayer);
+    };
+
+    Sprite_DynamicLightShadow.prototype.playerSpriteKey = function() {
+        const sprite = this.playerCharacterSprite();
+        if (!sprite || !sprite.visible || !sprite.bitmap || !sprite.bitmap.isReady()) {
+            return "no-player-sprite";
+        }
+
+        const frame = sprite._frame;
+        return [
+            Math.round(sprite.x),
+            Math.round(sprite.y),
+            sprite.alpha.toFixed(2),
+            sprite.scale.x.toFixed(2),
+            sprite.scale.y.toFixed(2),
+            frame.x,
+            frame.y,
+            frame.width,
+            frame.height
+        ].join(",");
+    };
+
+    Sprite_DynamicLightShadow.prototype.erasePlayerSprite = function(context) {
+        const sprite = this.playerCharacterSprite();
+        if (!sprite || !sprite.visible || sprite.alpha <= 0) return;
+
+        context.save();
+        context.globalCompositeOperation = "destination-out";
+        this.eraseSpriteFrame(context, sprite, sprite.x, sprite.y, sprite.alpha);
+
+        if (sprite._upperBody && sprite._upperBody.visible) {
+            this.eraseSpriteFrame(
+                context,
+                sprite._upperBody,
+                sprite.x + sprite._upperBody.x,
+                sprite.y + sprite._upperBody.y,
+                sprite.alpha * sprite._upperBody.alpha
+            );
+        }
+        if (sprite._lowerBody && sprite._lowerBody.visible) {
+            this.eraseSpriteFrame(
+                context,
+                sprite._lowerBody,
+                sprite.x + sprite._lowerBody.x,
+                sprite.y + sprite._lowerBody.y,
+                sprite.alpha * sprite._lowerBody.alpha
+            );
+        }
+        context.restore();
+    };
+
+    Sprite_DynamicLightShadow.prototype.eraseSpriteFrame = function(
+        context,
+        sprite,
+        x,
+        y,
+        alpha
+    ) {
+        const bitmap = sprite.bitmap;
+        if (!bitmap || !bitmap.isReady()) return;
+
+        const source = bitmap._canvas || bitmap._image;
+        const frame = sprite._frame;
+        if (!source || !frame || frame.width <= 0 || frame.height <= 0) return;
+
+        const width = frame.width * Math.abs(sprite.scale.x);
+        const height = frame.height * Math.abs(sprite.scale.y);
+        const drawX = Math.round(x - sprite.anchor.x * width);
+        const drawY = Math.round(y - sprite.anchor.y * height);
+
+        context.globalAlpha = clamp(alpha, 0, 1);
+        context.drawImage(
+            source,
+            frame.x,
+            frame.y,
+            frame.width,
+            frame.height,
+            drawX,
+            drawY,
+            Math.round(width),
+            Math.round(height)
+        );
+    };
+
     PluginManager.registerCommand(PLUGIN_NAME, "Refresh", () => {
         DynamicLightShadow.requestRefresh();
     });
@@ -728,14 +994,20 @@
         DynamicLightShadow.requestRefresh();
     };
 
-    const _Spriteset_Map_createWeather = Spriteset_Map.prototype.createWeather;
-    Spriteset_Map.prototype.createWeather = function() {
+    const _Spriteset_Map_createCharacters = Spriteset_Map.prototype.createCharacters;
+    Spriteset_Map.prototype.createCharacters = function() {
         this.createDynamicLightShadow();
-        _Spriteset_Map_createWeather.call(this);
+        _Spriteset_Map_createCharacters.call(this);
     };
 
     Spriteset_Map.prototype.createDynamicLightShadow = function() {
         this._dynamicLightShadowSprite = new Sprite_DynamicLightShadow();
-        this.addChild(this._dynamicLightShadowSprite);
+        this._dynamicLightShadowSprite._spriteset = this;
+        this._dynamicLightShadowSprite.z = OVERLAY_Z;
+        if (this._tilemap) {
+            this._tilemap.addChild(this._dynamicLightShadowSprite);
+        } else {
+            this.addChild(this._dynamicLightShadowSprite);
+        }
     };
 })();
