@@ -1,291 +1,291 @@
 {
-  "map": "Map010",
+  "map": "Map109",
   "events": [
     {
-      "id": "EV010",
+      "id": "EV001",
       "page": 0,
       "commands": [
         {
           "type": "dialogue",
           "actor": "sora",
+          "expression": "exhausted",
+          "text": "Zuko... Ann... Gin..."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
           "expression": "anxious",
-          "text": "..."
+          "text": "Where did everyone go?"
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "exhausted",
+          "text": "My body feels so heavy..."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "normal",
-          "text": "I have to keep going."
+          "text": "No. I can still walk."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "anxious",
-          "text": "Someone is still here..."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "You... are just a child."
+          "text": "There is a house by the road..."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "holding_tears",
-          "text": "Um... sorry for intruding."
+          "text": "Excuse me..."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "No, no. Come in."
+          "text": "A child? Out here?"
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "You look like you can barely stand on your own two feet."
+          "text": "Father, he looks hurt."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "Come in, boy. Do not stand at the door."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "anxious",
+          "text": "I am sorry. I did not mean to intrude."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "You look like you are one step away from collapsing."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "normal",
-          "text": "I-I can still walk."
+          "text": "I can still move."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "That is not the same thing as being okay."
+          "text": "That is not the same as being fine. Sit."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "Eat with us. Drink a little too."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "anxious",
-          "text": "..."
+          "text": "I do not want to trouble you."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "Sit down."
+          "text": "Food is meant to be shared before it goes cold."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "You should eat something."
+          "text": "And Father cooks better when someone praises him."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "Do not listen to that part."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "relieved",
-          "text": "I am fine, really."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "You are clearly not."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "Eat first. Then you can argue with me."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "anxious",
-          "text": "..."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "relieved",
-          "text": "This is good."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "Of course it is."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "My Dad made it!"
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "That's right, little one."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "anxious",
-          "text": "..."
+          "text": "Thank you."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "confused",
-          "text": "That... that really helped."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "Good."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "normal",
-          "text": "It happened right away."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "Happened what?"
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "annoyed",
-          "text": "The food. It made me feel better so fast. Like magic."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "You were just very hungry, boy."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "anxious",
-          "text": "I guess..."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "relieved",
-          "text": "Are you okay, sir?"
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "No."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "But I am still talking, so I suppose that is something."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "anxious",
-          "text": "..."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "The village ahead... it's gone."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "normal",
-          "text": "Gone?"
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "Poison. Waste from the old factory."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "It spread through the ground and the drinking water."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "normal",
-          "text": "A factory?"
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "Yes."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "We did not know it was leaking until it was already too late for most of us."
+          "text": "...Huh?"
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "confused",
-          "text": "Then why are there people still here?"
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "Some could not leave. Some did not know where else to go."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "And some of us... stayed too long trying to fix it."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "There is something else in that factory."
+          "text": "My strength came back so quickly."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "normal",
-          "text": "Something else?"
+          "text": "Was that mementos in the food?"
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "A big thing."
+          "text": "Mementos?"
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "anxious",
+          "text": "Never mind. Maybe I was just hungry."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "normal",
+          "text": "What is at the end of this road?"
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "Not like the others."
+          "text": "A village."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "I do not know what it was... But it was wrong in a way my head did not like."
+          "text": "Or what is left of one."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "confused",
+          "text": "What happened there?"
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "Waste from the factory poisoned it. The ground, the river, the homes."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "No one should live there anymore."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "Do not go that way if you value your life."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "anxious",
+          "text": "Is everyone gone?"
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "One man made it out."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "He was barely alive when I found him near the road."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "I brought him here and did what I could."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "normal",
+          "text": "Where is he?"
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "In the last room."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "Let him rest if he cannot answer you."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "normal",
+          "text": "I need to know what happened in that village."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "holding_tears",
+          "text": "Sir? Can you hear me?"
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "Who... are you?"
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "normal",
+          "text": "My name is Sora. I need to ask about your village."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "My village..."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "A few days ago, I heard something like an explosion from the factory."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "I went there to check."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "Inside... I saw a giant creature."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "It was not an animal. Not a person. Just something wrong."
         },
         {
           "type": "dialogue",
@@ -297,295 +297,265 @@
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "Maybe. Whatever you call it."
+          "text": "I ran."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "I locked the main factory door after it started moving."
+          "text": "When I reached the village, factory waste had already leaked into the river."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "I did not want it reaching the rest of the village."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "smiling",
-          "text": "Did it work?"
+          "text": "The water carried it everywhere."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "Not fully."
+          "text": "Before I left the factory area, I locked the gate."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "Some smaller things still got out."
+          "text": "I thought it would keep that huge thing inside."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "The Elementa."
+          "text": "But outside, the animals around the village had already changed."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "They attacked my family."
+          "text": "They became monsters. Elementa made of poison and waste."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "I ran home for my wife and child."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "We tried to leave."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "The monsters attacked us before we reached the road."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "My wife... my child..."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "They died there."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "anxious",
-          "text": "..."
+          "text": "I am sorry."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "My wife."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "My child."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "I tried to stop them. I really, really tried."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "anxious",
-          "text": "..."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "They didn't make it."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "I hid a photo of them inside the village."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "Please, kid."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "Bring it back to me."
+          "text": "I survived. That is all I managed to do."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "normal",
-          "text": "I will."
+          "text": "I need the key to the factory."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "If you do that for me..."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "I will give you the key to the factory."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "anxious",
-          "text": "The factory door..."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "Yes."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "If something evil still lives in there, then it should not be left alone to grow."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "relieved",
-          "text": "Okay. I promise."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "And one more thing. The factory is dark inside."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "Find a light before you go in, or that place will swallow you whole."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "relieved",
-          "text": "A light... okay. I'll look for one."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "You can rest here for a little while longer before you go."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "relieved",
-          "text": "Thank you."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "anxious",
-          "text": "..."
+          "text": "I will not hand it over for nothing."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "confused",
-          "text": "This place is really, really bad."
+          "text": "What do you want?"
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "Mmm... no... not there..."
+          "text": "There is a family photo in my house."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "The water... don't drink the water..."
+          "text": "Bring it to me."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "I want to see them one last time."
         },
         {
           "type": "dialogue",
           "actor": "sora",
-          "expression": "confused",
-          "text": "Excuse me? Can you hear me?"
+          "expression": "normal",
+          "text": "I will bring it back."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "Don't... don't let it in..."
+          "text": "And listen carefully."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "The factory is dark. Too dark to search with your bare eyes."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "Find a light before you enter."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "normal",
+          "text": "A photo and a light. I understand."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "anxious",
-          "text": "..."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "exhausted",
-          "text": "They're still alive... but they're so sick."
+          "text": "The village air is green..."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "confused",
-          "text": "So that is what is left here..."
+          "text": "The fog is so thick I can barely see the road."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "normal",
+          "text": "Waste-type Elementa are roaming here."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "anxious",
-          "text": "The stranger said I need a light..."
+          "text": "I have to search the houses carefully."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "Little lamp... little lamp went into the thin mouth..."
+          "text": "Do not come closer. I am not one of them. I am not bad. I still know my own hands."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "holding_tears",
-          "text": "Excuse me. I am not here to hurt you. Do you know where I can find a lantern? Or the stranger's house?"
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "House is sleeping. Lamp is hiding. Thin mouth under the hill. Too small, too hungry."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "confused",
-          "text": "A thin mouth under the hill... maybe a cave opening?"
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "Bring my shiny thing back if it still remembers me."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "relieved",
-          "text": "Okay. I will try."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "confused",
-          "text": "This gap is really small..."
+          "text": "I am not here to hurt you. I only want to ask something."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "normal",
-          "text": "If Ann were here, she would scold me for trying this."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "anxious",
-          "text": "Got it. It still works... a little."
+          "text": "Do you know the stranger's house? Or where I can find a light?"
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "Can you fly? Bring me that cloud. It has my shoes."
+          "text": "House? Stranger? The walls keep changing names. I do not trust walls anymore."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "But the small sun fell into the stone's narrow mouth."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "A crack under the hill swallowed it. Not a door. Not a throat. Something between."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "confused",
+          "text": "A narrow mouth under the hill..."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "My shiny thing is there too. It slipped away and forgot my pocket."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "Bring it back, and maybe my head will stop knocking."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "normal",
+          "text": "All right. I will look for it."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "confused",
+          "text": "This must be the place he meant."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "anxious",
+          "text": "The gap is very narrow. I can barely fit my arm through."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "normal",
+          "text": "If Ann were here, she would tell me this is a terrible idea."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "relieved",
+          "text": "Got it. The light still works."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "Can you fly?"
         },
         {
           "type": "dialogue",
@@ -597,79 +567,97 @@
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "Cloud took them. Cloud is rude."
+          "text": "The cloud up there stole something from me. If you fly, take it back."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "anxious",
-          "text": "I... do not think I can reach a cloud."
+          "text": "I cannot fly."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "Then do not drink the floor."
+          "text": "Then walk softly. The ground is listening with its teeth."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "relieved",
-          "text": "...Okay. I will remember that."
+          "text": "...I will be careful."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "anxious",
-          "text": "If Gin were here... he could probably get that."
+          "text": "There is an item by the river."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "normal",
-          "text": "No. I can't risk stepping in. Not now."
+          "text": "If Gin were here, we could probably get it."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "anxious",
-          "text": "This one..."
+          "text": "But the river has turned poisonous. I cannot risk it alone."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "normal",
-          "text": "I found it."
+          "text": "This house..."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "anxious",
-          "text": "..."
+          "text": "It must belong to the man from the road."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "holding_tears",
+          "text": "The photo is here."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "normal",
-          "text": "This is enough. I shouldn't pry anymore."
+          "text": "I should take it back to him."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "confused",
-          "text": "Wait... What happened here while I was gone?!"
+          "text": "Wait..."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "anxious",
-          "text": "No... No, please..."
+          "text": "The plants near the road are withered."
         },
         {
           "type": "dialogue",
           "actor": "sora",
-          "expression": "normal",
-          "text": "Hey-! Sir!"
+          "expression": "panicking",
+          "text": "The river is green here too."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "panicking",
+          "text": "No... The waste reached the house."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "panicking",
+          "text": "Sir! Are you there?"
         },
         {
           "type": "dialogue",
@@ -680,194 +668,152 @@
         {
           "type": "dialogue",
           "actor": "sora",
-          "expression": "relieved",
-          "text": "What happened?! You were fine!"
+          "expression": "holding_tears",
+          "text": "What happened to you and your child?"
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "The food... The water..."
+          "text": "The food... the water..."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "It was... already contaminated."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "anxious",
-          "text": "..."
+          "text": "It was already contaminated."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "I did not know."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "I thought... I thought it was still safe here."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "I am so sorry, boy."
+          "text": "I am sorry. I thought this place was still safe."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "panicking",
-          "text": "No... don't apologize... you were just trying to help me."
+          "text": "Do not apologize. You were trying to help me."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "That... that is not enough."
+          "text": "That is why you recovered so quickly."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "The poison... the mementos in it... it was not normal."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "anxious",
-          "text": "..."
+          "text": "So that was why..."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "That... that is why you felt better so fast earlier."
+          "text": "Go to him."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "The poison... it was still in there."
+          "text": "You brought what he asked for, did you not?"
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "holding_tears",
+          "text": "Yes."
         },
         {
           "type": "dialogue",
           "actor": "other",
           "expression": "default",
-          "text": "It just... had not reached you fully yet."
+          "text": "Then let him see his family."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "holding_tears",
+          "text": "Please hold on."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "anxious",
-          "text": "..."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "anxious",
-          "text": "..."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "Go."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "Take the photo back to him."
-        },
-        {
-          "type": "dialogue",
-          "actor": "other",
-          "expression": "default",
-          "text": "He is waiting for you."
+          "text": "He is not breathing..."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "holding_tears",
-          "text": "Okay. Hang in there, please."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "anxious",
-          "text": "..."
+          "text": "The factory key is in his hand."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "holding_tears",
-          "text": "You waited for me..."
+          "text": "I brought your photo back."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "holding_tears",
-          "text": "They are with you now."
+          "text": "I will leave it with you."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "holding_tears",
-          "text": "Please rest easy."
+          "text": "Rest in peace."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "normal",
-          "text": "I hope you get to meet them again."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "confused",
-          "text": "Somewhere peaceful, away from all this."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "holding_tears",
-          "text": "Thank you. I won't let this be for nothing."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "confused",
-          "text": "That is where it is..."
+          "text": "I hope you can meet your wife and child again somewhere gentle."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "normal",
-          "text": "The thing that started all of this."
+          "text": "I will take the key now."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "anxious",
-          "text": "Shii..."
+          "text": "I still have to find my Elementor and Shii."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "normal",
-          "text": "Are you in there too?"
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "confused",
-          "text": "This is it."
+          "text": "The factory should be deeper inside the village."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "anxious",
-          "text": "..."
+          "text": "More Elementa are blocking the road."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "normal",
+          "text": "This is the factory gate."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "anxious",
+          "text": "The key fits..."
         },
         {
           "type": "dialogue",
@@ -878,56 +824,32 @@
         {
           "type": "dialogue",
           "actor": "sora",
-          "expression": "anxious",
-          "text": "No way..."
+          "expression": "panicking",
+          "text": "The Elementor!"
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "anxious",
-          "text": "I just need to stay on my feet... live long enough to get out."
+          "text": "I cannot beat that thing like this."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "normal",
+          "text": "I only need to survive until I can escape."
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "exhausted",
-          "text": "Hah...!"
+          "text": "Just keep moving..."
         },
         {
           "type": "dialogue",
           "actor": "sora",
-          "expression": "normal",
-          "text": "Move, move, move!"
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "normal",
-          "text": "I am not done yet! I can't be!"
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "anxious",
-          "text": "..."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "anxious",
-          "text": "Just one more turn..."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "anxious",
-          "text": "Come on..."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "anxious",
-          "text": "Almost there..."
+          "expression": "panicking",
+          "text": "The escape chance is almost there!"
         },
         {
           "type": "dialogue",
@@ -938,26 +860,56 @@
         {
           "type": "dialogue",
           "actor": "sora",
-          "expression": "anxious",
-          "text": "..."
+          "expression": "exhausted",
+          "text": "I made it out..."
         },
         {
           "type": "dialogue",
           "actor": "sora",
-          "expression": "holding_tears",
-          "text": "It... it's not here."
-        },
-        {
-          "type": "dialogue",
-          "actor": "sora",
-          "expression": "holding_tears",
-          "text": "My Shii... it must be farther away."
+          "expression": "panicking",
+          "text": "The factory is collapsing!"
         },
         {
           "type": "dialogue",
           "actor": "sora",
           "expression": "anxious",
-          "text": "Then... I just have to keep going."
+          "text": "The entrance is blocked by rubble."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "normal",
+          "text": "There has to be another way out."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "confused",
+          "text": "An underground passage..."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "anxious",
+          "text": "It is like a maze under the factory."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "holding_tears",
+          "text": "Shii is not here."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "anxious",
+          "text": "I can feel it... Shii is far away from this place."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "normal",
+          "text": "Then I have to keep going."
         }
       ]
     }
