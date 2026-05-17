@@ -117,7 +117,7 @@
     "pitch": 100,
     "volume": 90
   },
-  "editMapId": 58,
+  "editMapId": 67,
   "elements": [
     "",
     "Heroic Element",
@@ -391,9 +391,9 @@
     "Water Block Char",
     "Elementors Appear",
     "Rain",
-    "",
-    "",
-    "",
+    "Cliff Char",
+    "Bridge Destroy",
+    "Cliff Cave",
     "",
     "",
     "",
@@ -1713,7 +1713,7 @@
     "",
     ""
   ],
-  "versionId": 55459043,
+  "versionId": 77202249,
   "victoryMe": {
     "name": "Victory1",
     "pan": 0,
