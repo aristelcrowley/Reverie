@@ -117,7 +117,7 @@
     "pitch": 100,
     "volume": 90
   },
-  "editMapId": 108,
+  "editMapId": 22,
   "elements": [
     "",
     "Heroic Element",
@@ -352,12 +352,12 @@
     "FIRST_OPENING",
     "BREAK_BRIDGE",
     "START_ELEMENTA",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
+    "BREAK_BRIDGE_2",
+    "SPAWN_ELEMENTA",
+    "CATCH_MC",
+    "RUN_MC",
+    "ZUKO_GLOVE",
+    "DOOR_OPEN",
     "",
     "",
     "",
@@ -1522,8 +1522,8 @@
   },
   "variables": [
     "",
-    "PLAYERREGION",
-    "FOLLOW_1",
+    "PASSWORD",
+    "",
     "",
     "",
     "",
@@ -1723,7 +1723,7 @@
     "",
     ""
   ],
-  "versionId": 41833352,
+  "versionId": 61664377,
   "victoryMe": {
     "name": "Victory1",
     "pan": 0,
