@@ -910,6 +910,162 @@
           "actor": "sora",
           "expression": "normal",
           "text": "Then I have to keep going."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "normal",
+          "text": "...So you are the one behind all of this."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "..."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "anxious",
+          "text": "The waste... the monsters... the poisoned river..."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "panicking",
+          "text": "Was all of this your doing?!"
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "H̸U̶N̸G̴E̶R̶..."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "confused",
+          "text": "What...?"
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "T̶H̷E̴Y̵ ̶K̴E̷P̶T̷ ̵F̸E̵E̶D̸I̷N̶G̵ ̵M̸E̶..."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "confused",
+          "text": "Feeding you...?"
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "T̸H̷E̶ ̷W̷A̸S̴T̷E̸..."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "O̷V̷E̸R̴F̶L̵O̸W̵E̶D̷..."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "anxious",
+          "text": "So the factory created you..."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "N̴O̷..."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "T̸H̷E̴Y̷ ̴D̶I̴D̷."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "normal",
+          "text": "..."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "T̴H̴E̴Y̵ ̵M̸A̴D̴E̶ ̷M̶E̵ ̵B̸R̵E̵A̵T̵H̶E̴."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "anxious",
+          "text": "You killed innocent people."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "I̷ ̸W̸A̶S̵ ̴B̶O̶R̴N̷ ̷F̴R̷O̷M̷ ̵T̵H̸E̶I̸R̸ ̸R̵O̶T̷."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "normal",
+          "text": "...I cannot let you leave this place."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "L̷E̸A̸V̷E̶...?"
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "I̷ ̵A̵M̷ ̸A̶L̸R̶E̶A̵D̶Y̶ ̸E̴V̵E̸R̴Y̷W̷H̴E̷R̵E̶."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "panicking",
+          "text": "...!"
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "C̴O̷M̸E̵ ̵C̷L̴O̷S̷E̶R̴."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "panicking",
+          "text": "No... this pressure..."
+        },
+        {
+          "type": "dialogue",
+          "actor": "sora",
+          "expression": "anxious",
+          "text": "I cannot beat this thing head-on."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "R̵U̷N̴ ̸I̴F̴ ̴Y̶O̴U̵ ̵W̶A̸N̴T̶."
+        },
+        {
+          "type": "dialogue",
+          "actor": "other",
+          "expression": "default",
+          "text": "T̷H̴E̶ ̷F̷A̸C̵T̴O̷R̵ ̸W̷I̷L̷L̸ ̶B̴U̸R̴Y̴ ̵Y̷O̷U̵ ̸W̵I̷T̴H̷ ̵M̸E̴."
         }
       ]
     }
