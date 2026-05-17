@@ -483,8 +483,8 @@
     "BATTLE_SCORPION",
     "GET_READY_ELEMENTA",
     "GOT_THE_LADDER",
-    "",
-    "",
+    "GOT_LEADER_DONE",
+    "ANN_IN_CRACK",
     "",
     "",
     "",
@@ -1713,7 +1713,7 @@
     "",
     ""
   ],
-  "versionId": 56587263,
+  "versionId": 74564029,
   "victoryMe": {
     "name": "Victory1",
     "pan": 0,
