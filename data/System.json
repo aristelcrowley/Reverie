@@ -117,7 +117,7 @@
     "pitch": 100,
     "volume": 90
   },
-  "editMapId": 53,
+  "editMapId": 57,
   "elements": [
     "",
     "Heroic Element",
@@ -389,8 +389,8 @@
     "Entering Village",
     "Elder",
     "Water Block",
-    "",
-    "",
+    "Elementors Appear",
+    "Rain",
     "",
     "",
     "",
@@ -1713,7 +1713,7 @@
     "",
     ""
   ],
-  "versionId": 32679260,
+  "versionId": 57027590,
   "victoryMe": {
     "name": "Victory1",
     "pan": 0,
