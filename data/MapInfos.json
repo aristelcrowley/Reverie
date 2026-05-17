@@ -56,7 +56,7 @@ null,
 {"id":54,"expanded":false,"name":"SIDE 1","order":56,"parentId":62,"scrollX":675.2727272727273,"scrollY":432},
 {"id":55,"expanded":false,"name":"SIDE 2","order":78,"parentId":58,"scrollX":675.2727272727273,"scrollY":423.2727272727273},
 {"id":56,"expanded":false,"name":"CLIMBING MOUNTAIN 2","order":76,"parentId":4,"scrollX":675.2727272727273,"scrollY":432},
-{"id":57,"expanded":false,"name":"MOUNTAIN VILLAGE AFTER","order":52,"parentId":4,"scrollX":892,"scrollY":624},
+{"id":57,"expanded":false,"name":"MOUNTAIN VILLAGE AFTER","order":52,"parentId":4,"scrollX":1290.5454545454545,"scrollY":423.2727272727273},
 {"id":58,"expanded":true,"name":"CLIFF","order":77,"parentId":4,"scrollX":1724.7272727272727,"scrollY":447.2727272727273},
 {"id":59,"expanded":true,"name":"BEFORE VILLAGE SECRET","order":48,"parentId":8,"scrollX":742.8,"scrollY":465.59999999999997},
 {"id":60,"expanded":true,"name":"CAVE","order":58,"parentId":63,"scrollX":1512,"scrollY":1592.3999999999999},
@@ -143,5 +143,5 @@ null,
 {"id":141,"expanded":true,"name":"TREASURE","order":73,"parentId":140,"scrollX":675.2727272727273,"scrollY":432},
 {"id":142,"expanded":false,"name":"CAVE 5","order":74,"parentId":60,"scrollX":1061.142857142857,"scrollY":665.1428571428571},
 {"id":143,"expanded":true,"name":"DEATHEND","order":75,"parentId":142,"scrollX":675.2727272727273,"scrollY":432},
-{"id":144,"expanded":true,"name":"BEFORE VILLAGE AFTER","order":47,"parentId":8,"scrollX":675.2727272727273,"scrollY":418.90909090909093}
+{"id":144,"expanded":true,"name":"BEFORE VILLAGE AFTER","order":47,"parentId":8,"scrollX":675.2727272727273,"scrollY":423.2727272727273}
 ]
