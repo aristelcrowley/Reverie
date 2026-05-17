@@ -117,7 +117,7 @@
     "pitch": 100,
     "volume": 90
   },
-  "editMapId": 108,
+  "editMapId": 97,
   "elements": [
     "",
     "Heroic Element",
@@ -431,7 +431,7 @@
     "Check Well",
     "Light",
     "Elementor",
-    "",
+    "If Zuko Was Here",
     "",
     "",
     "",
@@ -1713,7 +1713,7 @@
     "",
     ""
   ],
-  "versionId": 78702812,
+  "versionId": 96784768,
   "victoryMe": {
     "name": "Victory1",
     "pan": 0,
