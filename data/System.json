@@ -117,7 +117,7 @@
     "pitch": 100,
     "volume": 90
   },
-  "editMapId": 16,
+  "editMapId": 15,
   "elements": [
     "",
     "Heroic Element",
@@ -481,7 +481,7 @@
     "",
     "",
     "BATTLE_SCORPION",
-    "",
+    "GET_READY_ELEMENTA",
     "",
     "",
     "",
@@ -1713,7 +1713,7 @@
     "",
     ""
   ],
-  "versionId": 16339680,
+  "versionId": 56921115,
   "victoryMe": {
     "name": "Victory1",
     "pan": 0,
