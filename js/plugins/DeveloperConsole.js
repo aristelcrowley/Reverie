@@ -189,6 +189,15 @@
         return list.findIndex(entryName => String(entryName || "").trim().toLowerCase() === needle);
     }
 
+    function findActorIdByName(name) {
+        if (!$dataActors || !name) return 0;
+        const needle = String(name).trim().toLowerCase();
+        const actor = $dataActors.find(actorData => {
+            return actorData && String(actorData.name || "").trim().toLowerCase() === needle;
+        });
+        return actor ? actor.id : 0;
+    }
+
     function commandConfigGroup(config, keys) {
         for (const key of keys) {
             if (config && Object.prototype.hasOwnProperty.call(config, key)) {
@@ -473,6 +482,35 @@
                 });
                 this.log("Party healed.");
             }, "Full HP/MP semua party + clear state");
+
+            this.register("addActor", (args) => {
+                if (!$gameParty || !$dataActors) return this.log("Game data is not ready.", "error");
+                const targetName = args.join(" ").trim();
+                if (!targetName) return this.log("Usage: /addActor <name|all>", "error");
+
+                const names = targetName.toLowerCase() === "all" ? ["ZUKO", "GIN", "ANN"] : [targetName];
+                const addedNames = [];
+                const skippedNames = [];
+
+                for (const name of names) {
+                    const actorId = findActorIdByName(name);
+                    if (actorId <= 0) {
+                        skippedNames.push(name);
+                        continue;
+                    }
+
+                    const actorName = $dataActors[actorId].name;
+                    $gameParty.addActor(actorId);
+                    addedNames.push(actorName);
+                }
+
+                if (addedNames.length > 0) {
+                    this.log(`Added actor(s): ${addedNames.join(", ")}.`);
+                }
+                if (skippedNames.length > 0) {
+                    this.log(`Actor not found: ${skippedNames.join(", ")}.`, "error");
+                }
+            }, "Add actor by name. Usage: /addActor <name|all>");
 
             this.register("where", (args) => {
                 if (!$gameMap) return this.log("Map not loaded.", "error");
