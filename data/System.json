@@ -117,7 +117,7 @@
     "pitch": 100,
     "volume": 90
   },
-  "editMapId": 53,
+  "editMapId": 23,
   "elements": [
     "",
     "Heroic Element",
@@ -431,7 +431,7 @@
     "Check Well",
     "Light",
     "Elementor",
-    "",
+    "If Zuko Was Here",
     "",
     "",
     "",
@@ -485,9 +485,9 @@
     "GOT_THE_LADDER",
     "GOT_LEADER_DONE",
     "ANN_IN_CRACK",
-    "",
-    "",
-    "",
+    "SCORPION_DEFEAT",
+    "STOP_HALU",
+    "RESET_HALU",
     "",
     "",
     "",
@@ -1496,7 +1496,7 @@
       ]
     }
   ],
-  "testTroopId": 5,
+  "testTroopId": 4,
   "title1Name": "Ruins",
   "title2Name": "",
   "titleBgm": {
@@ -1513,7 +1513,7 @@
   "variables": [
     "",
     "PASSWORD",
-    "",
+    "HALU",
     "",
     "",
     "",
@@ -1713,7 +1713,7 @@
     "",
     ""
   ],
-  "versionId": 70849039,
+  "versionId": 40872523,
   "victoryMe": {
     "name": "Victory1",
     "pan": 0,

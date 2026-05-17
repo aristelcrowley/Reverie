@@ -13,7 +13,9 @@ const CURSOR_IMAGE_NAME = "FingerCursor";
 const CURSOR_NATIVE_SIZE = 14; 
 const CURSOR_DRAW_SIZE = 28;
 const AFRAID_STATE_ID = 9;
+const BASE_EMOTION_STATE_IDS = [3, 4, 5];
 const EMOTION_STATE_IDS = [3, 4, 5, 6, 7, 8];
+const PROTECTED_EMOTION_STATE_IDS = [6, 7, 8, AFRAID_STATE_ID];
 const BOND_SKILL_TYPE_ID = 3;
 const ENEMY_HUD_MAX_SLOTS = 9;
 const ENEMY_HUD_GROUP_X_OFFSET = 0;
@@ -348,6 +350,27 @@ Game_Troop.prototype.setup = function(troopId) {
 
 function isEmotionStateId(stateId) {
     return EMOTION_STATE_IDS.includes(Number(stateId));
+}
+
+function isBaseEmotionStateId(stateId) {
+    return BASE_EMOTION_STATE_IDS.includes(Number(stateId));
+}
+
+function hasProtectedEmotionState(battler) {
+    return !!(battler && battler.isStateAffected &&
+        PROTECTED_EMOTION_STATE_IDS.some(stateId => battler.isStateAffected(stateId)));
+}
+
+function rememberBlockedEmotionState(battler, stateId) {
+    if (!battler) return;
+    battler._reverieBlockedEmotionStateId = Number(stateId);
+}
+
+function takeBlockedEmotionState(battler) {
+    if (!battler) return 0;
+    const stateId = Number(battler._reverieBlockedEmotionStateId || 0);
+    battler._reverieBlockedEmotionStateId = 0;
+    return stateId;
 }
 
 function isAfraidAttackAction(action) {
@@ -721,6 +744,11 @@ const _Game_Battler_addState = Game_Battler.prototype.addState;
 Game_Battler.prototype.addState = function(stateId) {
     stateId = Number(stateId);
 
+    if (isBaseEmotionStateId(stateId) && hasProtectedEmotionState(this)) {
+        rememberBlockedEmotionState(this, stateId);
+        return;
+    }
+
     if (isEmotionStateId(stateId) && this.isStateAffected(AFRAID_STATE_ID)) {
         return;
     }
@@ -732,6 +760,14 @@ Game_Battler.prototype.addState = function(stateId) {
     }
 
     _Game_Battler_addState.call(this, stateId);
+
+    if (isBaseEmotionStateId(stateId) && this.isStateAffected(stateId)) {
+        for (const emotionStateId of BASE_EMOTION_STATE_IDS) {
+            if (emotionStateId !== stateId) {
+                this.removeState(emotionStateId);
+            }
+        }
+    }
 };
 
 const _Game_Action_makeDamageValue = Game_Action.prototype.makeDamageValue;
@@ -2036,6 +2072,23 @@ function pushReverieBuffText(logWindow, text) {
     logWindow.push('wait');
     logWindow.push('wait');
 }
+
+function pushReverieEmotionBlockedText(logWindow, target) {
+    logWindow.push('addText', battleLogName(target) + "'s current state would not change!");
+    logWindow.push('wait');
+    logWindow.push('wait');
+    logWindow.push('wait');
+    logWindow.push('wait');
+}
+
+const _Window_BattleLog_displayActionResults_ReverieEmotionBlock = Window_BattleLog.prototype.displayActionResults;
+Window_BattleLog.prototype.displayActionResults = function(subject, target) {
+    _Window_BattleLog_displayActionResults_ReverieEmotionBlock.call(this, subject, target);
+
+    if (takeBlockedEmotionState(target)) {
+        pushReverieEmotionBlockedText(this, target);
+    }
+};
 
 Window_BattleLog.prototype.displayChangedBuffs = function(target) {
     const result = target.result();

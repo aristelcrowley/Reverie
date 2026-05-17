@@ -34,6 +34,61 @@
  */
 
 (() => {
+    const SCALE_EPSILON = 0.001;
+    const scaledEnemyBitmapCache = new Map();
+
+    function frontScaleKey(filename, scale) {
+        return filename + ":" + scale.toFixed(3);
+    }
+
+    function bakeScaledEnemyBitmap(sourceBitmap, scale) {
+        const width = Math.max(1, Math.round(sourceBitmap.width * scale));
+        const height = Math.max(1, Math.round(sourceBitmap.height * scale));
+        const scaledBitmap = new Bitmap(width, height);
+
+        scaledBitmap.smooth = sourceBitmap.smooth;
+        scaledBitmap.blt(
+            sourceBitmap,
+            0,
+            0,
+            sourceBitmap.width,
+            sourceBitmap.height,
+            0,
+            0,
+            width,
+            height
+        );
+        return scaledBitmap;
+    }
+
+    function scaledEnemyBitmap(filename, sourceBitmap, scale) {
+        const key = frontScaleKey(filename, scale);
+        if (scaledEnemyBitmapCache.has(key)) {
+            return scaledEnemyBitmapCache.get(key);
+        }
+
+        const scaledBitmap = new Bitmap(1, 1);
+        scaledEnemyBitmapCache.set(key, scaledBitmap);
+
+        sourceBitmap.addLoadListener(() => {
+            const bakedBitmap = bakeScaledEnemyBitmap(sourceBitmap, scale);
+            scaledBitmap.resize(bakedBitmap.width, bakedBitmap.height);
+            scaledBitmap.blt(
+                bakedBitmap,
+                0,
+                0,
+                bakedBitmap.width,
+                bakedBitmap.height,
+                0,
+                0,
+                bakedBitmap.width,
+                bakedBitmap.height
+            );
+        });
+
+        return scaledEnemyBitmapCache.get(key);
+    }
+
     const _Sprite_Enemy_initMembers = Sprite_Enemy.prototype.initMembers;
     Sprite_Enemy.prototype.initMembers = function () {
         _Sprite_Enemy_initMembers.call(this);
@@ -44,7 +99,8 @@
         this._customX = null;
         this._customY = null;
         this._isAnimatedFront = false;
-        this._scale = 1.0;
+        this._frontAnimScale = 1.0;
+        this._frontAnimHasScale = false;
     };
 
     const _Sprite_Enemy_setBattler = Sprite_Enemy.prototype.setBattler;
@@ -61,6 +117,14 @@
         const note = enemy.note;
 
         this._animFrames = [];
+        this._animSpeed = 10;
+        this._animIndex = 0;
+        this._animTimer = 0;
+        this._customX = null;
+        this._customY = null;
+        this._isAnimatedFront = false;
+        this._frontAnimScale = 1.0;
+        this._frontAnimHasScale = false;
 
         // Read animation frames
         const frameRegex = /<Frame\s+(\d+):\s*(.+)>/gi;
@@ -102,9 +166,10 @@
 
         const scaleMatch = note.match(/<Upscale:\s*([\d.]+)>/i);
         if (scaleMatch) {
-            this._scale = parseFloat(scaleMatch[1]);
-            this.scale.x = this._scale;
-            this.scale.y = this._scale;
+            this._frontAnimScale = Math.max(0.1, parseFloat(scaleMatch[1]));
+            this._frontAnimHasScale =
+                Math.abs(this._frontAnimScale - 1.0) > SCALE_EPSILON;
+            this.applyFrontAnimatedScale();
         }
 
         // Apply custom position immediately if defined
@@ -120,6 +185,30 @@
         _Sprite_Enemy_update.call(this);
         if (this._enemy && this._isAnimatedFront) {
             this.updateFrontAnimation();
+            if (this._frontAnimHasScale) {
+                this.applyFrontAnimatedScale();
+            }
+        }
+    };
+
+    Sprite_Enemy.prototype.applyFrontAnimatedScale = function () {
+        const signX = this.scale.x < 0 ? -1 : 1;
+        const signY = this.scale.y < 0 ? -1 : 1;
+
+        this.scale.x = signX;
+        this.scale.y = signY;
+    };
+
+    Sprite_Enemy.prototype.loadFrontAnimatedBitmap = function (filename) {
+        const sourceBitmap = ImageManager.loadEnemy(filename);
+        if (this._frontAnimHasScale) {
+            this.bitmap = scaledEnemyBitmap(
+                filename,
+                sourceBitmap,
+                this._frontAnimScale
+            );
+        } else {
+            this.bitmap = sourceBitmap;
         }
     };
 
@@ -143,7 +232,11 @@
             if (this._battlerName !== currentName || this._battlerHue !== this._enemy.battlerHue()) {
                 this._battlerName = currentName;
                 this._battlerHue = this._enemy.battlerHue();
-                this.loadBitmap(currentName);
+                this.loadFrontAnimatedBitmap(currentName);
+                this.setHue(this._battlerHue);
+                if (this._frontAnimHasScale) {
+                    this.applyFrontAnimatedScale();
+                }
                 this.initVisibility();
             }
         } else {
