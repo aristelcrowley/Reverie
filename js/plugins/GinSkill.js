@@ -1,6 +1,6 @@
 /*:
  * @target MZ
- * @plugindesc Reverie - Gin-only swimming interaction for regions 247/248/249.
+ * @plugindesc Reverie - Gin-only swimming interaction for configurable water regions.
  * @author Safmica
  *
  * @param ginActorId
@@ -9,19 +9,22 @@
  * @default 6
  *
  * @param swimRegionId
- * @text Swimmable Water Region
- * @type number
+ * @text Swimmable Water Regions
+ * @type string
  * @default 247
+ * @desc One or more region IDs. Use commas for multiple regions, e.g. 247,250,251.
  *
  * @param shoreRegionId
- * @text Shore Region
- * @type number
+ * @text Shore Regions
+ * @type string
  * @default 248
+ * @desc One or more shore region IDs. Use commas for multiple regions.
  *
  * @param deepRegionId
- * @text Deep Water Region
- * @type number
+ * @text Deep Water Regions
+ * @type string
  * @default 249
+ * @desc One or more blocked deep-water region IDs. Use commas for multiple regions.
  *
  * @param swimCharacterName
  * @text Gin Swim Character
@@ -63,17 +66,17 @@
  * @help GinSkill.js
  *
  * Region setup:
- *   247 = swimmable water
- *   248 = shore/edge where Gin can enter and exit
- *   249 = deep water that blocks swimming
+ *   swimRegionId = swimmable water regions, e.g. 247 or 247,250,251
+ *   shoreRegionId = shore/edge regions where Gin can enter and exit
+ *   deepRegionId = deep water regions that block swimming
  *
- * Press OK/Enter/gamepad confirm while the player stands on region 248 and
- * faces region 247. If the party leader is Gin, the screen fades to black,
+ * Press OK/Enter/gamepad confirm while the player stands on a shore region
+ * and faces a swim region. If the party leader is Gin, the screen fades to black,
  * the party is reduced to Gin, Gin's character sprite changes, and the player
  * is placed one tile forward onto the water.
  *
- * While swimming, region 247 ignores tile passability for the player. Moving
- * toward region 249 is blocked with a warning. Moving toward region 248 fades
+ * While swimming, swim regions ignore tile passability for the player. Moving
+ * toward a deep region is blocked with a warning. Moving toward a shore region fades
  * the screen, restores the original party, restores Gin's normal sprite, and
  * places the player on the shore tile.
  *
@@ -91,6 +94,20 @@
         return Number.isFinite(value) ? value : defaultValue;
     };
 
+    const regionSetParam = function(name, defaultValue) {
+        const rawValue = params[name] !== undefined && params[name] !== "" ?
+            params[name] :
+            String(defaultValue);
+        const regions = String(rawValue)
+            .split(/[\s,;|/]+/)
+            .map(regionId => Number(regionId.trim()))
+            .filter(regionId => Number.isInteger(regionId) && regionId > 0);
+        if (regions.length === 0) {
+            regions.push(defaultValue);
+        }
+        return new Set(regions);
+    };
+
     const stringParam = function(name, defaultValue) {
         const value = params[name];
         return value !== undefined && value !== "" ? String(value) : defaultValue;
@@ -98,9 +115,9 @@
 
     const CONFIG = {
         ginActorId: numberParam("ginActorId", 6),
-        swimRegionId: numberParam("swimRegionId", 247),
-        shoreRegionId: numberParam("shoreRegionId", 248),
-        deepRegionId: numberParam("deepRegionId", 249),
+        swimRegionIds: regionSetParam("swimRegionId", 247),
+        shoreRegionIds: regionSetParam("shoreRegionId", 248),
+        deepRegionIds: regionSetParam("deepRegionId", 249),
         swimCharacterName: stringParam("swimCharacterName", "$Gin_Skill"),
         swimCharacterIndex: numberParam("swimCharacterIndex", 0),
         normalCharacterName: stringParam("normalCharacterName", "ActorReverie"),
@@ -156,6 +173,18 @@
             return this.regionAt($gamePlayer.x, $gamePlayer.y);
         },
 
+        isSwimRegion(regionId) {
+            return CONFIG.swimRegionIds.has(regionId);
+        },
+
+        isShoreRegion(regionId) {
+            return CONFIG.shoreRegionIds.has(regionId);
+        },
+
+        isDeepRegion(regionId) {
+            return CONFIG.deepRegionIds.has(regionId);
+        },
+
         frontPosition(direction) {
             const d = direction || $gamePlayer.direction();
             return {
@@ -175,12 +204,12 @@
             if (this.isTransitioning() || this.isSwimming()) {
                 return false;
             }
-            if (this.playerRegion() !== CONFIG.shoreRegionId) {
+            if (!this.isShoreRegion(this.playerRegion())) {
                 return false;
             }
 
             const front = this.frontPosition();
-            if (this.regionAt(front.x, front.y) !== CONFIG.swimRegionId) {
+            if (!this.isSwimRegion(this.regionAt(front.x, front.y))) {
                 return false;
             }
 
@@ -200,14 +229,14 @@
 
             const front = this.frontPosition(direction);
             const regionId = this.regionAt(front.x, front.y);
-            if (regionId === CONFIG.deepRegionId) {
+            if (this.isDeepRegion(regionId)) {
                 player.setDirection(direction);
                 player.setMovementSuccess(false);
                 this.showMessage(CONFIG.deepWaterMessage);
                 return "blocked";
             }
 
-            if (regionId === CONFIG.shoreRegionId) {
+            if (this.isShoreRegion(regionId)) {
                 player.setDirection(direction);
                 player.setMovementSuccess(false);
                 this.startTransition("exit", front.x, front.y, direction);
@@ -226,19 +255,19 @@
 
             const targetRegionId = this.regionAt(x2, y2);
             if (this.isSwimming()) {
-                if (targetRegionId === CONFIG.deepRegionId) {
+                if (this.isDeepRegion(targetRegionId)) {
                     return false;
                 }
                 if (
-                    targetRegionId === CONFIG.swimRegionId ||
-                    targetRegionId === CONFIG.shoreRegionId
+                    this.isSwimRegion(targetRegionId) ||
+                    this.isShoreRegion(targetRegionId)
                 ) {
                     return true;
                 }
                 return false;
             }
 
-            if (targetRegionId === CONFIG.swimRegionId) {
+            if (this.isSwimRegion(targetRegionId)) {
                 return false;
             }
 
