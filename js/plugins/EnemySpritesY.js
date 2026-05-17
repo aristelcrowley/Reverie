@@ -27,6 +27,15 @@
     const pluginName = document.currentScript.src.match(/([^\/]+)\.js$/)[1];
     const params = PluginManager.parameters(pluginName);
     const bottomOffset = Number(params["Bottom Offset"] ?? 40);
+    const ENEMY_Y_UP_NOTETAG = "EnemyYUp";
+
+    function enemyYUpOffset(sprite) {
+        const enemyData = sprite._enemy && sprite._enemy.enemy ? sprite._enemy.enemy() : null;
+        if (!enemyData || !enemyData.meta) return 0;
+
+        const value = enemyData.meta[ENEMY_Y_UP_NOTETAG];
+        return Number(value || 0) || 0;
+    }
 
     // ========================================================
     // 1. SAFMICA'S OFFSET CODE
@@ -37,7 +46,7 @@
         _Sprite_Enemy_updatePosition.call(this);
 
         this.anchor.y = 1;
-        this.y = Graphics.height - bottomOffset;
+        this.y = Graphics.height - bottomOffset - enemyYUpOffset(this);
     };
 
     const _Sprite_Enemy_updateStateSprite = Sprite_Enemy.prototype.updateStateSprite;
