@@ -181,7 +181,7 @@
         if (event.event().note) {
             lines.push(event.event().note);
         }
-        const list = event.list();
+        const list = event.page && event.page() ? event.list() : null;
         if (list) {
             for (const command of list) {
                 if (command && (command.code === 108 || command.code === 408)) {
