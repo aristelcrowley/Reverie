@@ -31,7 +31,7 @@ var $plugins =
 {"name":"SmoothEventMovement","status":true,"description":"Membuat pergerakan autonomous event menjadi lebih natural/smooth menggunakan pathfinding.","parameters":{}},
 {"name":"AnimatedTextEffects","status":true,"description":"Reverie - Custom Animated Message Text Effects","parameters":{}},
 {"name":"ObjectMovementAnimation","status":true,"description":"Event Object Movement Animation (12-Frames Loop)","parameters":{}},
-{"name":"DeveloperConsole","status":true,"description":"Developer Console untuk debugging dan testing.","parameters":{}},
+{"name":"DeveloperConsole","status":true,"description":"Developer Console untuk debugging dan testing.","parameters":{"CommandConfig":"\"{\\n\\\"Teleport\\\": [\\n    { \\\"name\\\": \\\"mine_puzzle\\\", \\\"mapId\\\": 22, \\\"x\\\": 21, \\\"y\\\": 6 }\\n  ]\\n}\""}},
 {"name":"FloatingText","status":true,"description":"[v1.0] Menampilkan teks custom di layar seperti gambar overlay.","parameters":{}},
 {"name":"CustomSaveLoadScreen","status":true,"description":"Reverie - custom save/load skeleton for HUD Maker Ultra.","parameters":{}},
 {"name":"GinSkill","status":true,"description":"Reverie - Gin-only swimming interaction for regions 247/248/249.","parameters":{"ginActorId":"6","swimRegionId":"247","shoreRegionId":"248","deepRegionId":"249","swimCharacterName":"$Gin_Skill","swimCharacterIndex":"0","normalCharacterName":"ActorReverie","normalCharacterIndex":"3","fadeFrames":"24","notGinMessage":"It seems like only Gin can do this","deepWaterMessage":"The water is too deep and the flow is too strong for swimming"}},

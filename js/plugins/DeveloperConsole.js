@@ -7,6 +7,44 @@
  * Plugin Developer Console.
  * Tekan F6 untuk membuka console.
  * Ketik /help untuk melihat daftar perintah.
+ *
+ * Command Config JSON:
+ * Isi parameter ini dari Plugin Manager untuk membuat command debug permanen.
+ *
+ * Contoh:
+ * {
+ *   "Macro": [
+ *     {
+ *       "name": "setup_test",
+ *       "commands": "/sw 1 on; /var 2 10",
+ *       "description": "Setup cepat untuk testing"
+ *     }
+ *   ],
+ *   "Switch": [
+ *     { "name": "lamp_on", "id": 1, "status": "on" },
+ *     { "name": "lamp_off", "id": 1, "status": "off" }
+ *   ],
+ *   "Variable": [
+ *     { "name": "set_score", "id": 2, "value": 50 }
+ *   ],
+ *   "Teleport": [
+ *     { "name": "hub", "mapId": 1, "x": 10, "y": 8 }
+ *   ]
+ * }
+ *
+ * Notes:
+ * - "Switch", "Switches", dan typo "Swtich" semuanya diterima.
+ * - Switch bisa memakai id/switchId, atau switchName jika ingin dicari
+ *   dari nama switch database.
+ * - Variable bisa memakai id/variableId, atau variableName.
+ * - Command name akan dinormalisasi: spasi menjadi "-".
+ * - /tp <mapId> <x,y> juga tersedia, contoh: /tp 1 10,8
+ *
+ * @param CommandConfig
+ * @text Command Config JSON
+ * @type note
+ * @default {}
+ * @desc JSON untuk command custom: Macro, Switch/Swtich, Variable, dan Teleport.
  */
 
 (() => {
@@ -16,22 +54,164 @@
     // Plugin Setup & Variables
     // -------------------------------------------------------------------------
     const PluginName = "DeveloperConsole";
+    const Parameters = PluginManager.parameters(PluginName);
+    const Config = parseJsonParameter(Parameters.CommandConfig, {}, "CommandConfig");
     let isConsoleOpen = false;
+
+    function parseJsonParameter(rawValue, fallback, label) {
+        if (rawValue == null || String(rawValue).trim() === "") {
+            return fallback;
+        }
+
+        let value = String(rawValue).trim();
+        let lastError = null;
+
+        for (let i = 0; i < 3; i++) {
+            try {
+                const parsed = JSON.parse(value);
+                if (typeof parsed === "string") {
+                    value = parsed.trim();
+                    continue;
+                }
+                return parsed == null ? fallback : parsed;
+            } catch (error) {
+                lastError = error;
+                break;
+            }
+        }
+
+        console.error(`[${PluginName}] Failed to parse ${label}.`, lastError);
+        return fallback;
+    }
+
+    function asArrayConfig(value) {
+        if (!value) return [];
+        if (Array.isArray(value)) return value;
+        if (typeof value !== "object") return [];
+
+        const directEntryKeys = [
+            "name",
+            "command",
+            "alias",
+            "id",
+            "switchId",
+            "switchName",
+            "variableId",
+            "variableName",
+            "eventId",
+            "letter",
+            "target",
+            "mapId",
+            "x",
+            "y",
+            "direction",
+            "fadeType",
+            "commands",
+            "value",
+            "status"
+        ];
+        if (directEntryKeys.some(key => Object.prototype.hasOwnProperty.call(value, key))) {
+            return [value];
+        }
+
+        return Object.entries(value).map(([name, entry]) => {
+            if (entry && typeof entry === "object" && !Array.isArray(entry)) {
+                return { name, ...entry };
+            }
+            return { name, value: entry };
+        });
+    }
+
+    function firstDefined(...values) {
+        return values.find(value => value !== undefined && value !== null && value !== "");
+    }
+
+    function toNumber(value, defaultValue = 0) {
+        const numberValue = Number(value);
+        return Number.isFinite(numberValue) ? numberValue : defaultValue;
+    }
+
+    function parseBooleanValue(value, defaultValue = false) {
+        if (typeof value === "boolean") return value;
+        if (typeof value === "number") return value !== 0;
+        if (value == null) return defaultValue;
+
+        const text = String(value).trim().toLowerCase();
+        if (["on", "true", "1", "yes", "y", "enable", "enabled"].includes(text)) return true;
+        if (["off", "of", "false", "0", "no", "n", "disable", "disabled"].includes(text)) return false;
+        return defaultValue;
+    }
+
+    function parseVariableValue(value) {
+        if (value == null) return value;
+        const text = String(value).trim();
+        if (text === "") return "";
+        if (/^-?\d+(\.\d+)?$/.test(text)) return Number(text);
+        if (["true", "false"].includes(text.toLowerCase())) {
+            return text.toLowerCase() === "true";
+        }
+
+        try {
+            return JSON.parse(text);
+        } catch (_error) {
+            return value;
+        }
+    }
+
+    function normalizeCommandName(name) {
+        return String(name || "")
+            .trim()
+            .replace(/^\//, "")
+            .replace(/\s+/g, "-")
+            .toLowerCase();
+    }
+
+    function findDatabaseIdByName(list, name) {
+        if (!list || !name) return 0;
+        const needle = String(name).trim().toLowerCase();
+        return list.findIndex(entryName => String(entryName || "").trim().toLowerCase() === needle);
+    }
+
+    function commandConfigGroup(config, keys) {
+        for (const key of keys) {
+            if (config && Object.prototype.hasOwnProperty.call(config, key)) {
+                return config[key];
+            }
+        }
+        return null;
+    }
 
     // -------------------------------------------------------------------------
     // Core Engine
     // -------------------------------------------------------------------------
     class DevConsole {
-        constructor() {
+        constructor(config = {}) {
             this.commands = {};
             this.macros = {};
+            this.config = config;
+            this._configApplied = false;
             this.logHistory = [];
             this.parser = new CommandParser();
             this.registerDefaultCommands();
         }
 
         register(name, handler, description = "") {
-            this.commands[name.toLowerCase()] = { handler, description };
+            this.commands[normalizeCommandName(name)] = { handler, description };
+        }
+
+        registerConfiguredCommand(name, handler, description = "") {
+            const commandName = normalizeCommandName(name);
+            if (!commandName) {
+                this.log("Config command skipped: missing name.", "error");
+                return false;
+            }
+            if (this.commands[commandName]) {
+                this.log(`Config command skipped: '/${commandName}' already exists.`, "error");
+                return false;
+            }
+
+            this.register(commandName, handler, description);
+            return true;
         }
 
         execute(inputString) {
@@ -79,6 +259,178 @@
             if (this.ui) this.ui.refreshLog();
         }
 
+        applyConfig(config) {
+            if (!config || typeof config !== "object") return;
+            this.registerConfigMacros(commandConfigGroup(config, ["Macro", "Macros", "macro", "macros", "Config", "configs"]));
+            this.registerConfigSwitches(commandConfigGroup(config, ["Switch", "Switches", "switch", "switches", "Swtich", "Swtiches"]));
+            this.registerConfigVariables(commandConfigGroup(config, ["Variable", "Variables", "variable", "variables"]));
+            this.registerConfigSelfSwitches(commandConfigGroup(config, ["SelfSwitch", "SelfSwitches", "selfSwitch", "selfSwitches"]));
+            this.registerConfigTeleports(commandConfigGroup(config, ["Teleport", "Teleports", "teleport", "teleports", "Tp", "TP"]));
+        }
+
+        applyConfigOnce() {
+            if (this._configApplied) return;
+            this._configApplied = true;
+            this.applyConfig(this.config);
+        }
+
+        registerConfigMacros(rawGroup) {
+            for (const entry of asArrayConfig(rawGroup)) {
+                const rawName = firstDefined(entry.name, entry.command, entry.alias);
+                const name = normalizeCommandName(rawName);
+                const commands = firstDefined(entry.commands, entry.commandString, entry.run, entry.value);
+                if (!name || !commands) {
+                    this.log("Macro config skipped: missing name or commands.", "error");
+                    continue;
+                }
+                if (this.commands[name]) {
+                    this.log(`Macro config skipped: cannot override base command '/${name}'.`, "error");
+                    continue;
+                }
+
+                this.macros[name] = {
+                    commands: String(commands),
+                    description: String(entry.description || entry.desc || "Configured macro")
+                };
+            }
+        }
+
+        registerConfigSwitches(rawGroup) {
+            for (const entry of asArrayConfig(rawGroup)) {
+                const commandName = firstDefined(entry.command, entry.cmd, entry.alias, entry.name);
+                const switchName = firstDefined(entry.switchName, entry.target, entry.name);
+                const switchId = toNumber(
+                    firstDefined(entry.id, entry.switchId, entry.switchID),
+                    findDatabaseIdByName($dataSystem && $dataSystem.switches, switchName)
+                );
+                const defaultStatus = firstDefined(entry.status, entry.value, entry.state);
+
+                if (switchId <= 0) {
+                    this.log(`Switch config skipped for '${commandName || switchName || "(unnamed)"}': invalid switch id/name.`, "error");
+                    continue;
+                }
+
+                this.registerConfiguredCommand(commandName, (args) => {
+                    const rawStatus = args.length > 0 ? args[0] : defaultStatus;
+                    if (rawStatus === undefined || rawStatus === null || rawStatus === "") {
+                        return this.log(`Usage: /${normalizeCommandName(commandName)} <on/off>`, "error");
+                    }
+                    const value = parseBooleanValue(rawStatus, null);
+                    if (value === null) return this.log("Invalid status. Use on/off.", "error");
+                    $gameSwitches.setValue(switchId, value);
+                    this.log(`Switch ${switchId} set to ${value ? "ON" : "OFF"}`);
+                }, String(entry.description || entry.desc || `Set switch ${switchId}`));
+            }
+        }
+
+        registerConfigVariables(rawGroup) {
+            for (const entry of asArrayConfig(rawGroup)) {
+                const commandName = firstDefined(entry.command, entry.cmd, entry.alias, entry.name);
+                const variableName = firstDefined(entry.variableName, entry.target, entry.name);
+                const variableId = toNumber(
+                    firstDefined(entry.id, entry.variableId, entry.variableID),
+                    findDatabaseIdByName($dataSystem && $dataSystem.variables, variableName)
+                );
+                const defaultValue = firstDefined(entry.value, entry.val);
+
+                if (variableId <= 0) {
+                    this.log(`Variable config skipped for '${commandName || variableName || "(unnamed)"}': invalid variable id/name.`, "error");
+                    continue;
+                }
+
+                this.registerConfiguredCommand(commandName, (args) => {
+                    const rawValue = args.length > 0 ? args.join(" ") : defaultValue;
+                    if (rawValue === undefined || rawValue === null || rawValue === "") {
+                        return this.log(`Usage: /${normalizeCommandName(commandName)} <value>`, "error");
+                    }
+                    const value = parseVariableValue(rawValue);
+                    $gameVariables.setValue(variableId, value);
+                    this.log(`Variable ${variableId} set to ${JSON.stringify(value)}`);
+                }, String(entry.description || entry.desc || `Set variable ${variableId}`));
+            }
+        }
+
+        registerConfigSelfSwitches(rawGroup) {
+            for (const entry of asArrayConfig(rawGroup)) {
+                const commandName = firstDefined(entry.command, entry.cmd, entry.alias, entry.name);
+                const eventId = toNumber(firstDefined(entry.eventId, entry.eventID, entry.event), 0);
+                const letter = String(firstDefined(entry.letter, entry.key, "A")).trim().toUpperCase();
+                const defaultStatus = firstDefined(entry.status, entry.value, entry.state);
+
+                if (eventId <= 0 || !["A", "B", "C", "D"].includes(letter)) {
+                    this.log(`Self switch config skipped for '${commandName || "(unnamed)"}': invalid event id/letter.`, "error");
+                    continue;
+                }
+
+                this.registerConfiguredCommand(commandName, (args) => {
+                    if (!$gameMap) return this.log("Map not loaded.", "error");
+                    const rawStatus = args.length > 0 ? args[0] : defaultStatus;
+                    if (rawStatus === undefined || rawStatus === null || rawStatus === "") {
+                        return this.log(`Usage: /${normalizeCommandName(commandName)} <on/off>`, "error");
+                    }
+                    const value = parseBooleanValue(rawStatus, null);
+                    if (value === null) return this.log("Invalid status. Use on/off.", "error");
+                    const key = [$gameMap.mapId(), eventId, letter];
+                    $gameSelfSwitches.setValue(key, value);
+                    this.log(`Self Switch ${letter} of Event ${eventId} set to ${value ? "ON" : "OFF"}`);
+                }, String(entry.description || entry.desc || `Set self switch ${letter} of event ${eventId}`));
+            }
+        }
+
+        registerConfigTeleports(rawGroup) {
+            for (const entry of asArrayConfig(rawGroup)) {
+                const commandName = firstDefined(entry.command, entry.cmd, entry.alias, entry.name);
+                const mapId = toNumber(firstDefined(entry.mapId, entry.mapID, entry.id), 0);
+                const x = toNumber(firstDefined(entry.x, entry.posX), NaN);
+                const y = toNumber(firstDefined(entry.y, entry.posY), NaN);
+                const direction = toNumber(firstDefined(entry.direction, entry.dir), 0);
+                const fadeType = toNumber(firstDefined(entry.fadeType, entry.fade), 0);
+
+                if (mapId <= 0 || !Number.isFinite(x) || !Number.isFinite(y)) {
+                    this.log(`Teleport config skipped for '${commandName || "(unnamed)"}': invalid map/x/y.`, "error");
+                    continue;
+                }
+
+                this.registerConfiguredCommand(commandName, () => {
+                    this.transferPlayer(mapId, x, y, direction, fadeType);
+                }, String(entry.description || entry.desc || `Teleport to map ${mapId} (${x}, ${y})`));
+            }
+        }
+
+        parseTeleportArgs(args) {
+            if (args.length < 2) return null;
+            const mapId = parseInt(args[0], 10);
+            const coordinateNumbers = args.slice(1).join(" ").match(/-?\d+/g) || [];
+            if (coordinateNumbers.length < 2) return null;
+
+            return {
+                mapId,
+                x: parseInt(coordinateNumbers[0], 10),
+                y: parseInt(coordinateNumbers[1], 10),
+                direction: coordinateNumbers[2] ? parseInt(coordinateNumbers[2], 10) : 0,
+                fadeType: coordinateNumbers[3] ? parseInt(coordinateNumbers[3], 10) : 0
+            };
+        }
+
+        transferPlayer(mapId, x, y, direction = 0, fadeType = 0) {
+            if (!$gamePlayer || !$gameMap) return this.log("Map scene is not ready.", "error");
+            if ($gameParty && $gameParty.inBattle && $gameParty.inBattle()) {
+                return this.log("Cannot teleport during battle.", "error");
+            }
+            if (!Number.isFinite(mapId) || mapId <= 0) return this.log("Invalid map ID.", "error");
+            if (!Number.isFinite(x) || x < 0 || !Number.isFinite(y) || y < 0) {
+                return this.log("Invalid coordinates.", "error");
+            }
+            if ($dataMapInfos && !$dataMapInfos[mapId]) {
+                return this.log(`Map ID ${mapId} not found.`, "error");
+            }
+
+            $gamePlayer.reserveTransfer(mapId, x, y, direction, fadeType);
+            SceneManager.goto(Scene_Map);
+            this.log(`Teleporting to Map ${mapId} (${x}, ${y}).`);
+            if (this.ui) this.ui.hide();
+        }
+
         registerDefaultCommands() {
             this.register("help", (args) => {
                 this.log("--- COMMAND LIST ---");
@@ -106,6 +458,18 @@
                 const y = $gamePlayer.y;
                 this.log(`Map: ${name} (ID: ${mapId}) | Pos: (${x}, ${y})`);
             }, "Menampilkan Map ID, Nama, dan Posisi Player");
+
+            this.register("tp", (args) => {
+                const transfer = this.parseTeleportArgs(args);
+                if (!transfer) return this.log("Usage: /tp <mapId> <x,y>  or  /tp <mapId> <x> <y>", "error");
+                this.transferPlayer(
+                    transfer.mapId,
+                    transfer.x,
+                    transfer.y,
+                    transfer.direction,
+                    transfer.fadeType
+                );
+            }, "Teleport player. Usage: /tp <mapId> <x,y>");
             
             this.register("sw", (args) => {
                 if (args.length < 2) return this.log("Usage: /sw <id> <on/off>", "error");
@@ -363,6 +727,7 @@
         hide() {
             this.visible = false;
             this.container.style.display = 'none';
+            isConsoleOpen = false;
             if ($gamePlayer) Input.clear();
         }
 
@@ -405,7 +770,14 @@
         return _Game_Interpreter_updateWaitTime.call(this);
     };
 
-    window.$devConsole = new DevConsole();
+    window.$devConsole = new DevConsole(Config);
+
+    const _Scene_Boot_start = Scene_Boot.prototype.start;
+    Scene_Boot.prototype.start = function() {
+        window.$devConsole.applyConfigOnce();
+        _Scene_Boot_start.call(this);
+    };
+
     let consoleUI = null;
 
     const _Scene_Manager_run = SceneManager.run;
