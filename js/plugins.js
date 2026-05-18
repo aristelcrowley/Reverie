@@ -49,5 +49,6 @@ var $plugins =
 {"name":"BattleConclusionLog","status":true,"description":"Reverie - routes battle conclusion messages through the battle log.","parameters":{}},
 {"name":"MementosPictureViewer","status":true,"description":"Reverie - Opens tagged keepsakes as picture pages from the Mementos menu.","parameters":{}},
 {"name":"MementosDropGacha","status":true,"description":"Reverie - Chapter-based mementos drop gacha for Elementa battles.","parameters":{}},
-{"name":"ManualAutosaveComment","status":true,"description":"Reverie - manual autosave from event comments.","parameters":{}}
+{"name":"ManualAutosaveComment","status":true,"description":"Reverie - manual autosave from event comments.","parameters":{}},
+{"name":"PreTitleCredits","status":true,"description":"Reverie - Menampilkan dua gambar credit sebelum title screen.","parameters":{"Image1":"precredit_1","Image2":"precredit_2","DisplayFrames":"120","FadeFrames":"30","FitMode":"fit","BackgroundColor":"#000000","AllowSkip":"true"}}
 ];
