@@ -80,6 +80,12 @@
     const POST_BATTLE_ENCOUNTER_GRACE_FRAMES = 75;
     const MONSTER_CHASE_SPEED_BONUS = 0.5;
     const MONSTER_CHASE_LOSE_DISTANCE_BONUS = 2;
+    const SMOOTH_DIRECTIONS = [2, 4, 6, 8];
+    const SMART_RANDOM_DESTINATION_ATTEMPTS = 80;
+    const SMART_MANUAL_DESTINATION_SCAN_LIMIT = 240;
+    const SMART_MANUAL_REACHABLE_POOL_LIMIT = 32;
+    const SMART_FALLBACK_DESTINATION_RADIUS = 12;
+    const SMART_EVENT_SEARCH_LIMIT = 24;
 
     const normalizeCutsceneParam = (value) => {
         if (value === undefined || value === null) return "";
@@ -283,6 +289,7 @@
         this._cutsceneActions = [];
         this._cutsceneHasBlocking = false;
         this._cutsceneStartRequested = false;
+        this._smoothBlockedFrames = 0;
     };
 
     // Bersihkan rute saat pindah halaman
@@ -296,6 +303,7 @@
     Game_Event.prototype.clearSmartDestination = function () {
         this._smartDestinationX = -1;
         this._smartDestinationY = -1;
+        this._smoothBlockedFrames = 0;
     };
 
     Game_Event.prototype.hasSmartDestination = function () {
@@ -309,6 +317,199 @@
     // Mengambil limitasi region dari EventRegionRestrict jika ada
     Game_Event.prototype.getAllowedRegions = function () {
         return this._allowedRegions || [];
+    };
+
+    const shuffledDirections = () => {
+        const directions = SMOOTH_DIRECTIONS.slice();
+        for (let i = directions.length - 1; i > 0; i--) {
+            const j = Math.randomInt(i + 1);
+            const temp = directions[i];
+            directions[i] = directions[j];
+            directions[j] = temp;
+        }
+        return directions;
+    };
+
+    Game_Event.prototype.smoothNextX = function (x, d) {
+        return $gameMap.roundXWithDirection(x, d);
+    };
+
+    Game_Event.prototype.smoothNextY = function (y, d) {
+        return $gameMap.roundYWithDirection(y, d);
+    };
+
+    Game_Event.prototype.smoothDistanceAfterStep = function (d, targetX, targetY) {
+        const x2 = this.smoothNextX(this.x, d);
+        const y2 = this.smoothNextY(this.y, d);
+        return $gameMap.distance(x2, y2, targetX, targetY);
+    };
+
+    Game_Event.prototype.isSmartRegionAllowed = function (x, y, allowedRegions) {
+        return allowedRegions.length === 0 || allowedRegions.includes($gameMap.regionId(x, y));
+    };
+
+    Game_Event.prototype.isSmartTileOccupied = function (x, y) {
+        if (this.isCollidedWithPlayerCharacters && this.isCollidedWithPlayerCharacters(x, y)) {
+            return true;
+        }
+
+        const events = $gameMap.eventsXyNt(x, y).filter(event => event !== this);
+        if (this._monsterMode === 'DIST') {
+            return events.some(event => event && event.isNormalPriority && event.isNormalPriority());
+        }
+        return events.length > 0;
+    };
+
+    Game_Event.prototype.isSmartTileMapPassable = function (x, y) {
+        return SMOOTH_DIRECTIONS.some(d => {
+            const x2 = this.smoothNextX(x, d);
+            const y2 = this.smoothNextY(y, d);
+            return $gameMap.isValid(x2, y2) && this.isMapPassable(x, y, d);
+        });
+    };
+
+    Game_Event.prototype.isValidSmartDestination = function (x, y, allowedRegions, targetRegions = []) {
+        if (!$gameMap.isValid(x, y)) return false;
+        if (this.x === x && this.y === y) return false;
+        if (!this.isSmartRegionAllowed(x, y, allowedRegions)) return false;
+        if (targetRegions.length > 0 && !targetRegions.includes($gameMap.regionId(x, y))) return false;
+        if (this.isSmartTileOccupied(x, y)) return false;
+        return this.isSmartTileMapPassable(x, y);
+    };
+
+    Game_Event.prototype.findReachableSmartDirectionTo = function (goalX, goalY) {
+        if (this.x === goalX && this.y === goalY) return 0;
+
+        const searchLimit = this.searchLimit();
+        const start = {
+            x: this.x,
+            y: this.y,
+            g: 0,
+            f: $gameMap.distance(this.x, this.y, goalX, goalY),
+            firstDir: 0
+        };
+        const keyOf = (x, y) => `${x},${y}`;
+        const openList = [start];
+        const openKeys = new Set([keyOf(start.x, start.y)]);
+        const closedKeys = new Set();
+        const nodes = new Map([[keyOf(start.x, start.y), start]]);
+
+        while (openList.length > 0) {
+            let bestIndex = 0;
+            for (let i = 1; i < openList.length; i++) {
+                if (openList[i].f < openList[bestIndex].f) {
+                    bestIndex = i;
+                }
+            }
+
+            const current = openList.splice(bestIndex, 1)[0];
+            const currentKey = keyOf(current.x, current.y);
+            openKeys.delete(currentKey);
+            closedKeys.add(currentKey);
+
+            if (current.x === goalX && current.y === goalY) {
+                return current.firstDir;
+            }
+
+            if (current.g >= searchLimit) continue;
+
+            for (const direction of SMOOTH_DIRECTIONS) {
+                if (!this.canPass(current.x, current.y, direction)) continue;
+
+                const x2 = this.smoothNextX(current.x, direction);
+                const y2 = this.smoothNextY(current.y, direction);
+                const key = keyOf(x2, y2);
+                if (closedKeys.has(key)) continue;
+
+                const g = current.g + 1;
+                let node = nodes.get(key);
+                if (!node) {
+                    node = { x: x2, y: y2 };
+                    nodes.set(key, node);
+                } else if (g >= node.g) {
+                    continue;
+                }
+
+                node.g = g;
+                node.f = g + $gameMap.distance(x2, y2, goalX, goalY);
+                node.firstDir = current.firstDir || direction;
+
+                if (!openKeys.has(key)) {
+                    openList.push(node);
+                    openKeys.add(key);
+                }
+            }
+        }
+
+        return 0;
+    };
+
+    Game_Event.prototype.canReachSmartDestination = function (x, y) {
+        return (this.x === x && this.y === y) || this.findReachableSmartDirectionTo(x, y) > 0;
+    };
+
+    Game_Event.prototype.setSmartDestination = function (x, y) {
+        this._smartDestinationX = x;
+        this._smartDestinationY = y;
+        this._smoothBlockedFrames = 0;
+    };
+
+    Game_Event.prototype.trySmoothMoveStraight = function (dir) {
+        if (dir <= 0) return false;
+        this.moveStraight(dir);
+        if (this.isMovementSucceeded()) {
+            this._smoothBlockedFrames = 0;
+            return true;
+        }
+        this._smoothBlockedFrames = (this._smoothBlockedFrames || 0) + 1;
+        return false;
+    };
+
+    Game_Event.prototype.tryMoveFromDirections = function (directions) {
+        for (const dir of directions) {
+            if (this.canPass(this.x, this.y, dir) && this.trySmoothMoveStraight(dir)) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    Game_Event.prototype.tryMoveTowardCoordinate = function (targetX, targetY) {
+        const directions = shuffledDirections().sort((a, b) => {
+            return this.smoothDistanceAfterStep(a, targetX, targetY) -
+                this.smoothDistanceAfterStep(b, targetX, targetY);
+        });
+        return this.tryMoveFromDirections(directions);
+    };
+
+    Game_Event.prototype.tryRandomPassableStep = function () {
+        return this.tryMoveFromDirections(shuffledDirections());
+    };
+
+    Game_Event.prototype.findFallbackSmartDestination = function (allowedRegions, targetRegions = []) {
+        const candidates = [];
+        const maxRadius = Math.min(SMART_FALLBACK_DESTINATION_RADIUS, this.searchLimit());
+
+        for (let radius = 1; radius <= maxRadius; radius++) {
+            for (let dx = -radius; dx <= radius; dx++) {
+                for (let dy = -radius; dy <= radius; dy++) {
+                    if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue;
+
+                    const x = $gameMap.roundX(this.x + dx);
+                    const y = $gameMap.roundY(this.y + dy);
+                    if (!this.isValidSmartDestination(x, y, allowedRegions, targetRegions)) continue;
+                    if (this.canReachSmartDestination(x, y)) {
+                        candidates.push({ x: x, y: y });
+                    }
+                }
+            }
+
+            if (candidates.length > 0) {
+                return candidates[Math.randomInt(candidates.length)];
+            }
+        }
+
+        return null;
     };
 
     Game_Event.prototype.setupSmoothMovementParams = function () {
@@ -1007,12 +1208,16 @@
         }
 
         const dir = this.findDirectionTo($gamePlayer.x, $gamePlayer.y);
-        if (dir > 0) {
-            this.moveStraight(dir);
-        } else {
-            // Jika sedang buntu terhalang benda tak tembus, putar acak
-            this.moveRandom();
+        if (dir > 0 && this.trySmoothMoveStraight(dir)) {
+            return;
         }
+
+        if (this.tryMoveTowardCoordinate($gamePlayer.x, $gamePlayer.y)) {
+            return;
+        }
+
+        // Jika semua jalur sedang tertutup, jangan mengunci arah gagal yang sama.
+        this.turnTowardPlayer();
     };
 
     // Override Random Movement (Membedakan mode S dan M)
@@ -1021,7 +1226,25 @@
         if (this._movementTypeEx === 'S' || this._movementTypeEx === 'M') {
             this.updateSmartRandomMovement();
         } else {
-            _Game_Event_moveTypeRandom.call(this);
+            switch (Math.randomInt(6)) {
+                case 0:
+                case 1:
+                    if (!this.tryRandomPassableStep()) this.turnRandom();
+                    break;
+                case 2:
+                case 3:
+                case 4:
+                    if (!this.trySmoothMoveStraight(this.direction())) {
+                        this.tryRandomPassableStep();
+                    }
+                    break;
+                case 5:
+                    this.resetStopCount();
+                    break;
+                default:
+                    _Game_Event_moveTypeRandom.call(this);
+                    break;
+            }
         }
     };
 
@@ -1116,7 +1339,7 @@
             if (this._movementTypeEx === 'S' || this._movementTypeEx === 'M') {
                 this.updateSmartRandomMovement();
             } else {
-                this.moveRandom();
+                if (!this.tryRandomPassableStep()) this.turnRandom();
             }
         }
     };
@@ -1136,19 +1359,28 @@
 
         // Jalankan ke tujuan tersebut via A-Star path finding
         if (this.hasSmartDestination()) {
-            const dir = this.findDirectionTo(this._smartDestinationX, this._smartDestinationY);
-            if (dir > 0) {
-                this.moveStraight(dir);
+            const targetX = this._smartDestinationX;
+            const targetY = this._smartDestinationY;
+            const dir = this.findReachableSmartDirectionTo(targetX, targetY);
+            if (dir > 0 && this.trySmoothMoveStraight(dir)) {
+                return;
+            } else if (dir > 0) {
+                this.clearSmartDestination();
+                this.tryMoveTowardCoordinate(targetX, targetY);
             } else {
                 // Jika dir=0 berarti jalan buntu terhalang (jalan terputus di tengah)
-                // Kita lupakan tujuan saat ini, biar nanti dia cari rute baru.
+                // Kita lupakan tujuan saat ini, lalu ambil langkah aman jika ada.
                 this.clearSmartDestination();
-                //this.moveRandom();
+                this.tryRandomPassableStep();
             }
+        } else {
+            this.tryRandomPassableStep();
         }
     };
 
     Game_Event.prototype.determineNewSmartDestination = function () {
+        const allowedRegs = this.getAllowedRegions();
+
         // Mode Manual: Cari Tile Spesifik dari Region Target
         if (this._movementTypeEx === 'M' && this._targetRegions.length > 0) {
             const validTiles = [];
@@ -1157,24 +1389,45 @@
 
             for (let x = 0; x < width; x++) {
                 for (let y = 0; y < height; y++) {
-                    if (this._targetRegions.includes($gameMap.regionId(x, y))) {
+                    if (this.isValidSmartDestination(x, y, allowedRegs, this._targetRegions)) {
                         validTiles.push({ x: x, y: y });
                     }
                 }
             }
 
             if (validTiles.length > 0) {
-                const dest = validTiles[Math.randomInt(validTiles.length)];
-                this._smartDestinationX = dest.x;
-                this._smartDestinationY = dest.y;
+                validTiles.sort((a, b) => {
+                    return $gameMap.distance(this.x, this.y, a.x, a.y) -
+                        $gameMap.distance(this.x, this.y, b.x, b.y);
+                });
+
+                const reachableTiles = [];
+                const scanLimit = Math.min(validTiles.length, SMART_MANUAL_DESTINATION_SCAN_LIMIT);
+                for (let i = 0; i < scanLimit; i++) {
+                    const tile = validTiles[i];
+                    if (this.canReachSmartDestination(tile.x, tile.y)) {
+                        reachableTiles.push(tile);
+                        if (reachableTiles.length >= SMART_MANUAL_REACHABLE_POOL_LIMIT) break;
+                    }
+                }
+
+                if (reachableTiles.length > 0) {
+                    const dest = reachableTiles[Math.randomInt(reachableTiles.length)];
+                    this.setSmartDestination(dest.x, dest.y);
+                    return;
+                }
+            }
+
+            const fallback = this.findFallbackSmartDestination(allowedRegs, this._targetRegions);
+            if (fallback) {
+                this.setSmartDestination(fallback.x, fallback.y);
                 return;
             }
         }
 
         // Mode Smart (Random Direction, Terintegrasi EventRegionRestrict)
         if (this._movementTypeEx === 'S') {
-            let attempts = 40; // Maksimal 40x mencoba mencari ujung rute
-            const allowedRegs = this.getAllowedRegions();
+            let attempts = SMART_RANDOM_DESTINATION_ATTEMPTS;
 
             while (attempts > 0) {
                 attempts--;
@@ -1184,26 +1437,20 @@
                 const destX = Math.round(this.x + Math.cos(angle) * distance);
                 const destY = Math.round(this.y + Math.sin(angle) * distance);
 
-                // Pastikan ujung koord valid & di dalam map
-                if ($gameMap.isValid(destX, destY)) {
-
-                    // Terintegrasi dengan EventRegionRestrict.js
-                    // Jika Region dibatasi, NPC dilarang set target di region luar batas !!
-                    if (allowedRegs.length > 0) {
-                        const targetRegId = $gameMap.regionId(destX, destY);
-                        if (!allowedRegs.includes(targetRegId)) {
-                            continue; // Region tidak diizinkan, lewati, cari loop baru
-                        }
-                    }
-
-                    // Jika lolos semua pengecekan, jadikan poin tersebut sebagai finish!
-                    this._smartDestinationX = destX;
-                    this._smartDestinationY = destY;
+                if (this.isValidSmartDestination(destX, destY, allowedRegs) &&
+                    this.canReachSmartDestination(destX, destY)) {
+                    this.setSmartDestination(destX, destY);
                     return;
                 }
             }
 
-            // Jika gagal dpt tile valid (mentok pojok dsb), lupakan tujuan.
+            const fallback = this.findFallbackSmartDestination(allowedRegs);
+            if (fallback) {
+                this.setSmartDestination(fallback.x, fallback.y);
+                return;
+            }
+
+            // Jika gagal dpt tile reachable (mentok pojok/dikepung), lupakan tujuan.
             this.clearSmartDestination();
         }
     };
@@ -1214,7 +1461,7 @@
     Game_Character.prototype.searchLimit = function () {
         if (this.event && typeof this.event === 'function') {
             // Berikan batas lebih jauh untuk Smart NPC & Approach yg baru
-            return 24;
+            return Math.max(SMART_EVENT_SEARCH_LIMIT, _Game_Character_searchLimit.call(this));
         }
         return _Game_Character_searchLimit.call(this);
     };
