@@ -117,7 +117,7 @@
     "pitch": 100,
     "volume": 90
   },
-  "editMapId": 69,
+  "editMapId": 72,
   "elements": [
     "",
     "Heroic Element",
@@ -1572,7 +1572,7 @@
     "",
     "",
     "",
-    "",
+    "Savanna Loop",
     "",
     "",
     "",
@@ -1713,7 +1713,7 @@
     "",
     ""
   ],
-  "versionId": 29919569,
+  "versionId": 27253084,
   "victoryMe": {
     "name": "Victory1",
     "pan": 0,
