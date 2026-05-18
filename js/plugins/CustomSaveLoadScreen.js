@@ -17,6 +17,7 @@
  * Built the visible UI in SRD HUD Maker Ultra with Map HUD components.
  *
  * Save file IDs:
+ *   0 = Manual autosave slot
  *   1-8 = Manual save files
  */
 
@@ -25,9 +26,11 @@
 
     const DEBUG_MODE = false;
     
+    const AUTOSAVE_FILE_ID = 0;
     const SAVE_FILE_COUNT = 8;
     const FIRST_SAVEFILE_ID = 1;
     const MAX_SAVEFILE_ID_EXCLUSIVE = SAVE_FILE_COUNT + 1;
+    const TOTAL_SAVE_LOAD_ROWS = SAVE_FILE_COUNT + 1;
     const VISIBLE_FILE_ROWS = 3;
     const CURSOR_IMAGE_NAME = "FingerCursor";
     const CURSOR_NATIVE_SIZE = 14;
@@ -57,16 +60,36 @@
     const originalSavefileInfo = DataManager.savefileInfo;
     const originalMakeSavefileInfo = DataManager.makeSavefileInfo;
 
-    const isManagedSavefileId = function(savefileId) {
+    const isAutosaveFileId = function(savefileId) {
+        return Number(savefileId) === AUTOSAVE_FILE_ID;
+    };
+
+    const isManualSavefileId = function(savefileId) {
         return savefileId >= FIRST_SAVEFILE_ID && savefileId < MAX_SAVEFILE_ID_EXCLUSIVE;
     };
 
     const managedSavefileIds = function() {
+        const ids = [AUTOSAVE_FILE_ID];
+        for (let i = FIRST_SAVEFILE_ID; i < MAX_SAVEFILE_ID_EXCLUSIVE; i++) {
+            ids.push(i);
+        }
+        return ids;
+    };
+
+    const manualSavefileIds = function() {
         const ids = [];
         for (let i = FIRST_SAVEFILE_ID; i < MAX_SAVEFILE_ID_EXCLUSIVE; i++) {
             ids.push(i);
         }
         return ids;
+    };
+
+    const isManagedSavefileId = function(savefileId) {
+        return isAutosaveFileId(savefileId) || isManualSavefileId(savefileId);
+    };
+
+    const savefileIdFromIndex = function(index) {
+        return Number(index);
     };
 
     DataManager.maxSavefiles = function() {
@@ -111,8 +134,8 @@
     };
 
     DataManager.emptySavefileId = function() {
-        for (let i = FIRST_SAVEFILE_ID; i < MAX_SAVEFILE_ID_EXCLUSIVE; i++) {
-            if (!this.savefileInfo(i)) return i;
+        for (const id of manualSavefileIds()) {
+            if (!this.savefileInfo(id)) return id;
         }
         return -1;
     };
@@ -154,6 +177,7 @@
     };
 
     const savefileName = function(savefileId) {
+        if (isAutosaveFileId(savefileId)) return "AUTOSAVE";
         return "FILE " + savefileId;
     };
 
@@ -421,7 +445,7 @@
     };
 
     Window_ReverieSaveLoadList.prototype.maxItems = function() {
-        return SAVE_FILE_COUNT;
+        return TOTAL_SAVE_LOAD_ROWS;
     };
 
     Window_ReverieSaveLoadList.prototype.maxCols = function() {
@@ -441,7 +465,8 @@
     };
 
     Window_ReverieSaveLoadList.prototype.savefileId = function() {
-        return this.index() + FIRST_SAVEFILE_ID;
+        if (this.index() < 0) return -1;
+        return savefileIdFromIndex(this.index());
     };
 
     Window_ReverieSaveLoadList.prototype.isCurrentItemEnabled = function() {
@@ -450,7 +475,7 @@
 
     Window_ReverieSaveLoadList.prototype.isEnabled = function(savefileId) {
         if (this._mode === "save") {
-            return this._canSave && isManagedSavefileId(savefileId);
+            return this._canSave && isManualSavefileId(savefileId);
         } else {
             return !!DataManager.savefileInfo(savefileId);
         }
@@ -484,7 +509,7 @@
     };
 
     Window_ReverieSaveLoadList.prototype.drawItem = function(index) {
-        const savefileId = index + FIRST_SAVEFILE_ID;
+        const savefileId = savefileIdFromIndex(index);
         const info = DataManager.savefileInfo(savefileId);
         const rect = this.itemLineRect(index);
         const clearY = Math.min(rect.y, rect.y + SAVE_LOAD_FILE_ITEM_Y_OFFSET) - 8;
@@ -736,7 +761,7 @@
         const info = DataManager.savefileInfo(savefileId);
 
         if (this._mode === "save") {
-            if (!this._canSave || !isManagedSavefileId(savefileId)) {
+            if (!this._canSave || !isManualSavefileId(savefileId)) {
                 SoundManager.playBuzzer();
                 this._fileWindow.activate();
                 return;
@@ -944,7 +969,8 @@
         $gameTemp.hudShowSaveLoadConfirm = confirmOpen;
 
         for (let slot = 0; slot < VISIBLE_FILE_ROWS; slot++) {
-            const savefileId = $gameTemp.saveLoadTopIndex + slot + FIRST_SAVEFILE_ID;
+            const savefileIndex = $gameTemp.saveLoadTopIndex + slot;
+            const savefileId = savefileIdFromIndex(savefileIndex);
             const info = DataManager.savefileInfo(savefileId);
             const hasData = !!info;
             const slotExists = isManagedSavefileId(savefileId);
@@ -952,8 +978,11 @@
             const mainMapName = savefileMainMapName(info);
 
             $gameTemp["saveLoadSlotId" + slot] = savefileId;
+            $gameTemp["saveLoadSlotIndex" + slot] = savefileIndex;
             $gameTemp["saveLoadSlotFileName" + slot] = fileName;
             $gameTemp["saveLoadSlotExists" + slot] = slotExists;
+            $gameTemp["saveLoadSlotIsAutosave" + slot] = isAutosaveFileId(savefileId);
+            $gameTemp["saveLoadSlotCanSave" + slot] = isManualSavefileId(savefileId);
             $gameTemp["saveLoadSlotHasData" + slot] = hasData;
             $gameTemp["saveLoadSlotCurrent" + slot] = savefileId === $gameTemp.saveLoadFileId;
             $gameTemp["saveLoadSlotSelected" + slot] = fileCursorVisible && savefileId === $gameTemp.saveLoadFileId;
