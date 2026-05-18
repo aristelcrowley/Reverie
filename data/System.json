@@ -1515,8 +1515,8 @@
     "PASSWORD",
     "HALU",
     "MEMENTOS",
-    "",
-    "",
+    "DARK SCREEN",
+    "GATE",
     "",
     "",
     "",
@@ -1713,7 +1713,7 @@
     "",
     ""
   ],
-  "versionId": 81075691,
+  "versionId": 47289630,
   "victoryMe": {
     "name": "Victory1",
     "pan": 0,
