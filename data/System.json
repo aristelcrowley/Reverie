@@ -117,7 +117,11 @@
     "pitch": 100,
     "volume": 90
   },
+<<<<<<< HEAD
   "editMapId": 43,
+=======
+  "editMapId": 111,
+>>>>>>> 47f8a14bd321ae8f5b2baa67a7b7f98a174334b2
   "elements": [
     "",
     "Heroic Element",
@@ -396,7 +400,7 @@
     "Cliff Cave",
     "Peak's Shii",
     "Village Cave",
-    "",
+    "Without Ann",
     "",
     "",
     "",
@@ -431,7 +435,7 @@
     "Check Well",
     "Light",
     "Elementor",
-    "",
+    "If Zuko Was Here",
     "",
     "",
     "",
@@ -485,10 +489,10 @@
     "GOT_THE_LADDER",
     "GOT_LEADER_DONE",
     "ANN_IN_CRACK",
-    "",
-    "",
-    "",
-    "",
+    "SCORPION_DEFEAT",
+    "STOP_HALU",
+    "RESET_HALU",
+    "DOG_RUN",
     "",
     "",
     "",
@@ -1496,7 +1500,7 @@
       ]
     }
   ],
-  "testTroopId": 5,
+  "testTroopId": 4,
   "title1Name": "Ruins",
   "title2Name": "",
   "titleBgm": {
@@ -1513,7 +1517,7 @@
   "variables": [
     "",
     "PASSWORD",
-    "",
+    "HALU",
     "",
     "",
     "",
@@ -1572,7 +1576,7 @@
     "",
     "",
     "",
-    "",
+    "Savanna Loop",
     "",
     "",
     "",
@@ -1713,7 +1717,11 @@
     "",
     ""
   ],
+<<<<<<< HEAD
   "versionId": 17093519,
+=======
+  "versionId": 94486818,
+>>>>>>> 47f8a14bd321ae8f5b2baa67a7b7f98a174334b2
   "victoryMe": {
     "name": "Victory1",
     "pan": 0,
