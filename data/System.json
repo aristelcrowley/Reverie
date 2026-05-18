@@ -117,7 +117,7 @@
     "pitch": 100,
     "volume": 90
   },
-  "editMapId": 68,
+  "editMapId": 57,
   "elements": [
     "",
     "Heroic Element",
@@ -397,8 +397,8 @@
     "Peak's Shii",
     "Village Cave",
     "Without Ann",
-    "",
-    "",
+    "Shii",
+    "Village After Cave",
     "",
     "",
     "",
@@ -1713,7 +1713,7 @@
     "",
     ""
   ],
-  "versionId": 27451805,
+  "versionId": 21174193,
   "victoryMe": {
     "name": "Victory1",
     "pan": 0,
