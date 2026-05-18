@@ -1,25 +1,22 @@
-FLOW MAP
-Sora dan Zuko mulai turun dari gunung. 
-Ketika mereka setengah jalan turun dari gunung, mereka dapat melihat stage selanjutnya, yaitu padang savana
-Dapat terlihat oleh kedua karakter, bahwa padangnya sangatlah luas, jarang ada tanaman dan pohon yang terlihat. 
-Sora dan Zuko berbincang bahwa tempat padangnya sangatlah luas, tidak terlihat apa apa (mereka dapat melihat hal ini karena mereka masih berada di atas gunung) 
-Mereka akhirnya turun gunung dan masuk ke stage selanjutnya. 
-Akan terdapat perbincangan bahwa tempat ini sangatlah panas
-Mereka akan tersesat di padang savana ini, dikarenakan haus dan kelelahan (intinya mereka berhalusinasi)
-Mereka akhirnya akan kehabisan makanan dan minuman
-Mereka juga akan menemukan kaca kaca yang berserakan di tanah (kaca tersebut merupakan bagian dari bagunan yang telah rata dengan tanah. 
-Sora akan merasa sangat kelelahan, sedangkan Zuko masih memiliki sedikit tenaga karena trait miliknya (pada saat ini, pemain hanya bisa mengontrol Zuko, tidak bisa mengganti karakter ke Sora, Sora hanya bisa mengikuti dengan kelelahan) 
-Akan terdapat perbincangan, dimana Zuko cemas dengan keadaan Sora, Zuko berkata hal seperti menyemangati Sora dan tetap kuat. 
-Akhirnya mereka menemukan desa (atau bisa dibilang beberapa bangunan) 
-Zuko berteriak bahagia, dan segera membantu Sora untuk mencapai desa tersebut. 
-Tetapi ternyata desa tersebut hanyalah reruntuhan (bangunan yang dindingnya masih berdiri sebagian) 
-Zuko berteriak minta tolong ke arah desa, tetapi tidak ada yang menjawab
-Sora dan Zuko akhirnya sadar bahwa desa tersebut hanyalah reruntuhan saja. 
-Zuko meninggalkan Sora untuk meristirahat di bawah bayangan bangunan, sementata Zuko mencari makanan dan minuman
-Zuko perlu menyelesaikan puzzle untuk mendapatkan makanan dan minuman (puzzle maze dimana Zuko harus mendorong batu)
-Setelah mendapatkannya, Zuko kembali ke tempat Sora beristirahat
-Akhirnya mereka mendapatkan tenaga yang cukup untuk lanjut mencari shii
-Selagi berkeliling kota, mereka berbincang bahwa mungkin kota ini dulunya sangatlah megah, dimana hal tersebut dapat dilihat dari bekas reruntuhannya, terdapat reruntuhan gedung-gedung dengan banyak kaca di dindingnya
-Saat menjelajah, mereka juga akan menemukan puzzle puzzle yang hanya bisa dipecahkan oleh Gin atau Ann
-Saat pertama kali ketemu puzzle yang berkaitan dengan Ann, Zuko akan berkata seperti “there's a crack in the wall. Ann! Can you pass it”, tetapi Zuko baru sadar bahwa Ann sudah tidak bersama mereka lagi (hal ini disebabkan oleh kelelahan, kelaparan, dan halusinasi)
-Akhirnya mereka bertemu dengan elementor di tengah tengah reruntuhan kota
+FLOW MAP REVISI
+Fase 1: Turun Gunung & Pemandangan Savana
+Perjalanan dimulai dengan Sora dan Zuko yang berjalan menuruni lereng gunung (meninggalkan area Stage 2).
+Fase 2: Memasuki Cuaca Ekstrem & Awal Eksplorasi
+Pemain akhirnya tiba di bawah dan resmi memasuki map padang savana.
+Dialog Eksplorasi (Pop-up): Sesaat setelah masuk, hawa panas langsung terasa. Zuko dan Sora mengeluhkan suhu yang sangat ekstrem dan panas terik yang membakar.
+Pemain mulai mengeksplorasi padang pasir yang luas. 
+Fase 3: Kelelahan & Halusinasi
+Seiring berjalannya eksplorasi di tengah terik matahari, persediaan makanan dan minuman mereka habis. Mereka mulai tersesat, kelelahan, dan mengalami halusinasi ringan akibat dehidras (dimana mereka selalu melewati jalan yang sama, tidak bisa ke jalan selanjutnya).
+Terdapat dialog dimana mereka kebingungan mencari jalan.
+Dialog Emosional: Zuko yang biasanya berisik dan usil kini terlihat sangat cemas melihat keadaan Sora. Zuko terus mengajak Sora bicara, menyemangatinya agar tetap kuat dan tidak menyerah di tengah panasnya savana.
+Fase 4: Menemukan Jalan Ke Map Selanjutnya
+Setelah berputar-putar mengelilingi map. Sora dan Zuko akhirnya menemukan jalan yang berbeda.
+Mereka langsung senang dan bahagia.
+Fase 5: Konfrontasi dengan Elementor
+Ketika mereka merasa senang karena telah menemukan jalan, mereka disambut dengan Elementor yang menghadang jalan.
+Hal ini langsung membuat mereka sedikit putus asa. Karena mereka telah kelelahan dan sekarang harus melawan Elementor.
+Fase 6: Zuko Mendapatkan Shii
+Zuko dengan bahagia mendapat, tetapi dengan juga cemas melihat keadaan Sora.
+Dimana Sora tadi telah lelah berputar-putar map dan kemudian langsung melawan Elementor.
+Karena hal itu Zuko sangat khawatir meninggalkan Sora mencari Shii milik Sora.
+Sora menenangkan Zuko bahwa dia akan baik baik saja dan berhasil mendapatkan Shii miliknya sendiri.
