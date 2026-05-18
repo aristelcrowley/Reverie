@@ -1,18 +1,22 @@
 /*:
  * @target MZ
- * @plugindesc Reverie - disables autosave triggers and autosave slot access.
+ * @plugindesc Reverie - disables automatic autosave.
  * @author Aristel
  *
  * @help DisableAutosave.js
  *
- * Turns autosave into a no-op and treats savefile ID 0 as unavailable.
- * Manual save files are unchanged.
+ * Automatic autosave is a no-op.
+ *
+ * Savefile ID 0 can only be written while another plugin deliberately marks
+ * a manual autosave as in progress. Manual save files are unchanged.
  */
 
 (() => {
     "use strict";
 
     const AUTOSAVE_ID = 0;
+
+    DataManager._reverieManualAutosaveInProgress = false;
 
     Game_System.prototype.isAutosaveEnabled = function() {
         return false;
@@ -42,28 +46,16 @@
         };
     }
 
-    const _DataManager_savefileInfo = DataManager.savefileInfo;
-    DataManager.savefileInfo = function(savefileId) {
-        if (Number(savefileId) === AUTOSAVE_ID) return null;
-        return _DataManager_savefileInfo.call(this, savefileId);
-    };
-
     const _DataManager_saveGame = DataManager.saveGame;
     DataManager.saveGame = function(savefileId) {
-        if (Number(savefileId) === AUTOSAVE_ID) return Promise.resolve(false);
+        if (Number(savefileId) === AUTOSAVE_ID && !this._reverieManualAutosaveInProgress) {
+            return Promise.resolve(false);
+        }
         return _DataManager_saveGame.call(this, savefileId);
     };
 
-    const _DataManager_loadGame = DataManager.loadGame;
-    DataManager.loadGame = function(savefileId) {
-        if (Number(savefileId) === AUTOSAVE_ID) {
-            return Promise.reject(new Error("Autosave is disabled."));
-        }
-        return _DataManager_loadGame.call(this, savefileId);
-    };
-
     DataManager.isAnySavefileExists = function() {
-        for (let savefileId = 1; savefileId < this.maxSavefiles(); savefileId++) {
+        for (let savefileId = 0; savefileId < this.maxSavefiles(); savefileId++) {
             if (this.savefileInfo(savefileId)) return true;
         }
         return false;
@@ -72,7 +64,7 @@
     DataManager.latestSavefileId = function() {
         let latestId = 0;
         let latestTimestamp = -Infinity;
-        for (let savefileId = 1; savefileId < this.maxSavefiles(); savefileId++) {
+        for (let savefileId = 0; savefileId < this.maxSavefiles(); savefileId++) {
             const info = this.savefileInfo(savefileId);
             if (info && info.timestamp > latestTimestamp) {
                 latestTimestamp = info.timestamp;
@@ -85,7 +77,7 @@
     DataManager.earliestSavefileId = function() {
         let earliestId = 1;
         let earliestTimestamp = Infinity;
-        for (let savefileId = 1; savefileId < this.maxSavefiles(); savefileId++) {
+        for (let savefileId = 0; savefileId < this.maxSavefiles(); savefileId++) {
             const info = this.savefileInfo(savefileId);
             if (info && info.timestamp < earliestTimestamp) {
                 earliestTimestamp = info.timestamp;
@@ -94,4 +86,5 @@
         }
         return earliestId;
     };
+
 })();
