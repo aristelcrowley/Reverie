@@ -117,7 +117,7 @@
     "pitch": 100,
     "volume": 90
   },
-  "editMapId": 58,
+  "editMapId": 75,
   "elements": [
     "",
     "Heroic Element",
@@ -400,8 +400,8 @@
     "Shii",
     "Village After Cave",
     "",
-    "",
-    "",
+    "Shii Char",
+    "Shii",
     "",
     "",
     "",
@@ -1713,7 +1713,7 @@
     "",
     ""
   ],
-  "versionId": 97346816,
+  "versionId": 82686472,
   "victoryMe": {
     "name": "Victory1",
     "pan": 0,
