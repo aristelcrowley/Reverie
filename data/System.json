@@ -117,7 +117,7 @@
     "pitch": 100,
     "volume": 90
   },
-  "editMapId": 22,
+  "editMapId": 24,
   "elements": [
     "",
     "Heroic Element",
@@ -488,7 +488,7 @@
     "SCORPION_DEFEAT",
     "STOP_HALU",
     "RESET_HALU",
-    "",
+    "DOG_RUN",
     "",
     "",
     "",
@@ -1713,7 +1713,7 @@
     "",
     ""
   ],
-  "versionId": 70770737,
+  "versionId": 80922329,
   "victoryMe": {
     "name": "Victory1",
     "pan": 0,
