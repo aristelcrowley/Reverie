@@ -488,7 +488,7 @@
     "SCORPION_DEFEAT",
     "STOP_HALU",
     "RESET_HALU",
-    "",
+    "DOG_RUN",
     "",
     "",
     "",
@@ -1713,7 +1713,7 @@
     "",
     ""
   ],
-  "versionId": 11371036,
+  "versionId": 94486818,
   "victoryMe": {
     "name": "Victory1",
     "pan": 0,
