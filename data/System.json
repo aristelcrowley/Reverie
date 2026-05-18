@@ -117,7 +117,7 @@
     "pitch": 100,
     "volume": 90
   },
-  "editMapId": 23,
+  "editMapId": 67,
   "elements": [
     "",
     "Heroic Element",
@@ -396,7 +396,7 @@
     "Cliff Cave",
     "Peak's Shii",
     "Village Cave",
-    "",
+    "Without Ann",
     "",
     "",
     "",
@@ -1713,7 +1713,7 @@
     "",
     ""
   ],
-  "versionId": 40872523,
+  "versionId": 84247945,
   "victoryMe": {
     "name": "Victory1",
     "pan": 0,
