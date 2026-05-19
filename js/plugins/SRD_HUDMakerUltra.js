@@ -143,9 +143,9 @@ var $gameUltraHUD = null;
 			console.warn(msg);
 			if (confirm(msg + "\nWould you like to open the download page (right-click -> save)?")) {
 				const url = "https://raw.githubusercontent.com/SumRndmDde/HUDMakerUltra/main/SRD_UltraBase.js";
-				if (Utils.isNwjs()) {
+				if (canUseNWFileSystem()) {
 					require('nw.gui').Shell.openExternal(url);
-				} else if (window && window.open) {
+				} else if (typeof window !== "undefined" && window.open) {
 					window.open(url);
 				}
 			}
@@ -171,6 +171,19 @@ var $gameUltraHUD = null;
 
 	const params = PluginManager.parameters("SRD_HUDMakerUltra");
 
+	function getNWRoot() {
+		return typeof globalThis !== "undefined" ? globalThis : (typeof window !== "undefined" ? window : null);
+	}
+
+	function isNWWindowAvailable() {
+		const root = getNWRoot();
+		return !!(root && root.nw && root.nw.Window && typeof root.nw.Window.get === "function");
+	}
+
+	function canUseNWFileSystem() {
+		return isNWWindowAvailable() && typeof require === "function";
+	}
+
 	$.autoReload = String(params["Auto-Reload HUD Data"]).trim().toLowerCase() === "true";
 	$.screenshots = String(params["Enable Screenshots"]).trim().toLowerCase() === "true";
 	$.hideStatusWindow = String(params["Hide Battle Status Window"]).trim().toLowerCase() === "true";
@@ -188,7 +201,7 @@ var $gameUltraHUD = null;
 	//=============================================================================
 	class UltraHUDManager {
 		static getHUDDataString() {
-			if (Utils.isNwjs()) {
+			if (canUseNWFileSystem()) {
 				const fs = require("fs");
 				if (fs.existsSync($.hudDataPath)) {
 					return fs.readFileSync($.hudDataPath);
@@ -1884,7 +1897,7 @@ var $gameUltraHUD = null;
 	//=============================================================================
 	$.SceneManager = $.SceneManager || {};
 
-	if ($.screenshots && Utils.isNwjs()) {
+	if ($.screenshots && canUseNWFileSystem()) {
 
 		$.SceneManager.onKeyDown = SceneManager.onKeyDown;
 		SceneManager.onKeyDown = function (event) {
@@ -2109,25 +2122,14 @@ var $gameUltraHUD = null;
 	//=============================================================================
 	if ($.autoReload) {
 
-		// function setupAutoReload() {
-		// 	UltraHUDManager.checkHUDDataString(true);
-		// 	const win = nw.Window.get();
-		// 	win.on("focus", UltraHUDManager.checkHUDDataString.bind(UltraHUDManager));
-		// 	// if (typeof nw !== "undefined") {
-		// 	// nw.Window.get().on('focus', function() {
-		// 	//     location.reload();
-		// 	// });
-		// }
-
 		function setupAutoReload() {
-			UltraHUDManager.checkHUDDataString(true);
-			// const win = nw.Window.get();
-			// win.on("focus", UltraHUDManager.checkHUDDataString.bind(UltraHUDManager));
-			if (typeof nw !== "undefined") {
-				nw.Window.get().on('focus', function () {
-					location.reload();
-				});
+			if (!isNWWindowAvailable()) {
+				return;
 			}
+
+			UltraHUDManager.checkHUDDataString(true);
+			const win = getNWRoot().nw.Window.get();
+			win.on("focus", UltraHUDManager.checkHUDDataString.bind(UltraHUDManager));
 		}
 
 		setupAutoReload();
